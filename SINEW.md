@@ -130,9 +130,30 @@ request's data is still passed method to method.
   passed through modules that do not use it, and records passed where one field is needed. A
   sinew is tramp data seen as a path. Their transaction analysis and "mosque" shape (high fan-in
   at the bottom, thin top) is the healthy-system picture above.
-- **Information flow** (Henry and Kafura 1981): complexity × (fan-in × fan-out)². The
-  replication by Kitchenham et al. (1990) found size predicted as well; any result here has to
-  beat size and complexity, not just correlate.
+- **Information flow** (Henry and Kafura 1981): complexity × (fan-in × fan-out)². The closest
+  ancestor of complexity × divergence, but it **multiplies** in and out, so a unit high on both
+  scores highest; divergence **subtracts** them and sets aside the units that take in more than
+  they send. The replication by Kitchenham et al. (1990) found size predicted as well; any
+  result here has to beat size and complexity, not just correlate.
+- **God Class and Brain Class** (Lanza and Marinescu, *Object-Oriented Metrics in Practice*,
+  2006): a God Class is very complex (WMC), not cohesive (TCC) and accesses foreign data (ATFD),
+  so complexity and coupling are already combined, through fixed thresholds. A Brain Class is a
+  complex class that is not a God Class; how a catchment differs from it is to be stated from
+  the book's own definition (section 5.5) before any claim is made.
+- **Instability** (Martin 1994): `Ce / (Ca + Ce)`, outgoing dependencies against all
+  dependencies, per package. A balance of out against in, like divergence, but of who depends
+  on whom, at package level, for architecture; divergence counts what is passed on each call,
+  per method and class.
+- **Message passing coupling** (Li and Henry 1993): the number of send statements in a class,
+  close to the call count in the flow definition. **Module coupling** (Dhama 1994): coupling
+  from input and output parameters, separating data from control, as the data and flow
+  definitions do.
+- **Thresholds that are not constants**: relative thresholds (Oliveira, Valente and Lima 2014:
+  "p% of classes must have M ≤ k") and benchmark-derived thresholds (Alves et al. 2010) derive a
+  constant from a corpus of systems, as did Lanza and Marinescu's. None fits each codebase on its
+  own scale.
+- **Facades and proxies**: classes with high fan-out but one responsibility are known false
+  positives of coupling-based god class detection; an exemption is needed from that side too.
 - **System complexity** (Card and Glass 1990): structural (fan-out²) plus data complexity; a
   replication found fan-out² significant.
 - **Data clumps** (Fowler, *Refactoring*): the same group of parameters travelling together.
@@ -146,6 +167,27 @@ request's data is still passed method to method.
 
 Lehman's laws state that complexity grows unless work is done to reduce it; they do not state
 that it is conserved. Conservation is the companion study's finding, and this study depends on it.
+
+### What is new
+
+The ingredients above are old. What no work found so far does:
+
+1. **A scale-free god definition per codebase.** A robust outlier rule (modified z ≥ 3.5) fitted
+   on each repository's own units, with no raw-scale constant, tested against human labels.
+   Relative and benchmark thresholds derive constants from a corpus.
+2. **Divergence as a signed balance that classifies concentration.** out − in places each unit
+   as catchment, pipe or junction, and complexity in a catchment is set aside as good
+   concentration. Information flow multiplies in and out; instability balances dependencies,
+   per package.
+3. **Three views of coupling compared head to head:** the call as control flow (flow), the data
+   alone (data), and the first item as the message (message).
+4. **The sinew:** data riding the control flow, with attraction as the harm that concentrates
+   complexity. Tramp data is its ancestor.
+5. **The test itself:** pre-registered, a human oracle as the primary, tool and replication
+   oracles beside it, and a consistency analysis across oracles and ways of calculating
+   complexity. Most code smell studies choose and test on the same data.
+
+"No work found so far" is the result of a literature search, not proof of absence.
 
 ## Exploratory observations (petclinic, not evidence)
 
