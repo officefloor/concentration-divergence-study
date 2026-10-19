@@ -1,10 +1,8 @@
 # Pre-registered analysis plan (DRAFT, not registered)
 
-> **Status (19 October 2026): draft for the author's review.** Nothing below is registered
-> until this file is committed and tagged (`plan-v1`). Sections marked **OPEN** are decisions
-> still to make; every one must be closed, or moved to an explore-half choice with its
-> criterion stated, before the tag. No measurement code exists yet, and none is to be written
-> against data before the tag except on the exploration material named under *Exploration*.
+> **Status (20 October 2026): registered when this file is committed and tagged
+> (`plan-v1`).** No measurement code exists yet, and none is to be written against data
+> before the tag except on the exploration material named under *Exploration*.
 
 ## The question
 
@@ -12,7 +10,7 @@ The companion
 [complexity-concentration study](https://github.com/officefloor/complexity-concentration-study)
 (paper one) asks whether a scale-free relative outlier rule (modified z ≥ 3.5 on per-unit
 complexity, fitted per repository) recovers god classes as well as a tuned absolute
-threshold. The author's working view, formed from that study's main results, is that
+threshold. The working view, formed from that study's main results, is that
 complexity concentration does find god classes and methods but cannot tell a **god unit** from
 a **complex algorithm**: a leaf that legitimately holds the complexity of what it computes.
 
@@ -22,6 +20,9 @@ system against the data it receives, separates the two:
 > In Java, does weighting a unit's complexity by its coupling divergence recover the units
 > people call god classes and methods better than complexity alone, by setting complex leaves
 > aside?
+
+Coupling divergence is the measurable part of the **sinew** construct (data coupled to the
+control flow), described in [`SINEW.md`](SINEW.md).
 
 **Purpose.** A definition of a god class or method with **no raw-scale threshold**, so that it
 moves with the codebase it is applied to, including as AI-maintained code changes what a
@@ -34,8 +35,7 @@ repository. Not architecture: whether a service is a "god service" in a fleet of
 outside this study, as it is outside what OfficeFloor sets out to address.
 
 **Not in this study.** Early signs in git history that a unit is becoming a god unit. That is
-the next study, once a detector exists (see the draft hypotheses H1–H3 in
-`sinew-identification-study/paper/SINEW.md`); it will be registered separately.
+the next study, once a detector exists; it will be registered separately.
 
 ## What was seen before this plan
 
@@ -45,11 +45,14 @@ Stated so a reader can judge what could have shaped it:
   plan was written. It motivates the question (the relative rule flags many classes PMD does
   not), so it is not evidence for it.
 - **Paper one's MLCQ results** (step 5 and the exploratory step 5a) were **not** read when this
-  draft was written. **OPEN:** tag this plan before reading them, or record the date they were
-  read relative to the tag. Tagging first keeps MLCQ a clean oracle for this study (below).
-- **Exploratory petclinic observations** in `sinew-identification-study/paper/SINEW.md`: on
-  AI-evolved petclinic code, the **outgoing** arguments carried the signal for later outlier
-  status and the balance (out − in) added little. That observation was seen first, so the
+  draft was written. The commit history records the order: the first draft (with the question,
+  the MLCQ oracle and the primary estimand) is committed before those results existed, every
+  later change to this plan is its own commit, and the commit adding paper one's
+  `mlcq-hashes.txt` dates the MLCQ results. A change made after that date is visible as such
+  and can be judged on its diff.
+- **Exploratory petclinic observations** (the role shares are in
+  [`SINEW.md`](SINEW.md)): on AI-evolved petclinic code, the **outgoing** arguments
+  carried the signal for later outlier status and the balance (out − in) added little. That observation was seen first, so the
   outgoing-only arm below is a pre-registered secondary, not a post-hoc addition.
 
 ## Units and measures
@@ -70,17 +73,41 @@ provide. Its per-method `in` and `out` are **joined to paper one's units** by fi
 line (paper one's `_labelled_unit_at` handling of annotations). Reported as diagnostics: the
 share of lizard units joined, and the methods JavaParser finds that lizard does not (paper one
 found lizard silently drops the methods after some class-level field initialisers, such as
-`X = B << C`). **OPEN:** joined measurement as above (exact comparability with paper one), or
-every field re-implemented on JavaParser (one parser, no blind spot, but a new baseline that
-must be validated against lizard).
+`X = B << C`).
 
-- **Method unit:** paper one's (every function lizard reports in a `.java` file).
-- **Class unit:** the file (unit = file, as in paper one).
-- **in:** the number of parameters the method declares (a varargs parameter counts once).
-- **out:** the sum, over the method's **internal** calls (below), of the number of arguments
-  passed. Calls are method calls, constructor calls (`new T(...)`) and explicit
-  `this(...)`/`super(...)` calls.
-- **Divergence:** `d = out − in`.
+**Two result sets.** Every analysis in this plan is run twice, on two measurements of the same
+checkouts:
+
+1. **Joined (primary):** complexity by paper one's extractor, coupling by JavaParser, joined as
+   above. Units are paper one's: every function lizard reports in a `.java` file, and the
+   file. The baseline is exactly paper one's, which is why this set decides.
+2. **JavaParser only (robustness):** every complexity field re-implemented on JavaParser's
+   syntax tree, so complexity, parameters and calls come from one parser and no method is
+   lost to lizard's blind spot. Units: every method and constructor with a body, including
+   those of nested and anonymous classes (lambdas belong to their enclosing method), and the
+   file. Each field is validated against lizard's value on the joined units of the
+   exploration material, and the agreement (rank correlation and the share of exact matches
+   per field) is reported before any result.
+
+The verdicts are read from the joined set. The JavaParser-only set is reported beside it, with
+each verdict marked **agrees** or **differs**; a verdict that differs is reported as such, with
+the units and fields that drive the difference, and does not change the joined verdict.
+
+- **Class unit:** the file (unit = file, as in paper one), in both sets.
+- **Parameters `p`:** the number of parameters the method declares (a varargs parameter counts
+  once).
+- **Calls:** the method's **internal** calls (below): method calls, constructor calls
+  (`new T(...)`) and explicit `this(...)`/`super(...)` calls. `a(c)` is the number of arguments
+  passed on call `c`.
+- **Coupling, three definitions** ([`SINEW.md`](SINEW.md)), every one measured and analysed:
+
+  | definition k | in | out |
+  |---|---|---|
+  | **flow**: each call is control flow (+1), each parameter is data coupled to it (+1) | `1 + p` | `Σ (1 + a(c))` |
+  | **data**: parameters only; a call with no arguments adds nothing | `p` | `Σ a(c)` |
+  | **message** (Kay): the first item is the message, every call at least the message | `max(p − 1, 1)` | `Σ max(a(c) − 1, 1)` |
+
+- **Divergence:** `d_k = out_k − in_k`, for each definition k.
 - **Internal call:** a call whose target the symbol solver resolves to a declaration in the
   repository's own analysed sources. Resolution uses the repository's source roots plus the JDK
   (reflection type solver), with no build and no dependencies. A call that resolves to the JDK
@@ -88,17 +115,39 @@ must be validated against lizard).
   type, which is what "external" means here). The number of unresolved calls, and those whose
   receiver type *is* declared in the repository but whose method could not be resolved
   ("should have resolved"), are reported per repository.
-- **Analysed sources:** `.java` files outside any path segment named `build`, `target`,
-  `generated`, `generated-sources`, `out` or `bin`, at **any** depth (paper one skipped build
-  directories only at the root, which let Mindustry's generated code in). **OPEN:** whether test
-  sources (`src/test/`, `test/` roots) are analysed; MLCQ labels a few test classes.
+- **Analysed sources: application code only.** The study is about application code as it
+  evolves, which is where OfficeFloor applies; test code is a different question, left to a
+  later study. Both result sets use paper one's file rule, which already leaves out test
+  directories (the sampler's names: `test`, `tests`, `testing`, `javatests` and the like). On
+  top of it, before any rule is fitted, both drop every `.java` file with a path segment named
+  - `androidTest`, `testFixtures` or `integrationTest` (test roots paper one's rule does not
+    name), or
+  - `build`, `target`, `generated`, `generated-sources`, `out` or `bin`, at **any** depth
+    (paper one skipped build directories only at the root, which let Mindustry's generated
+    code in).
 
-**OPEN, the Kay rule.** `SINEW.md` proposes not counting the first parameter and the first
-argument of each call (a method receives one message). Default here: **plain counts** (the
-author's definition), with the Kay variant as a labelled sensitivity analysis.
+  The extractor and its measures are unchanged; only the file set differs from paper one's,
+  so the units each rule is fitted on can differ. MLCQ labels on dropped files are out of
+  scope, and their number is reported.
 
-**OPEN, same-class calls.** At method level, a call to another method of the same class is
-internal and counts. At class level, see the class score below.
+**The primary definition is flow**, the purest definition of a sinew. All three definitions
+run through every analysis below; data and message are pre-registered secondaries.
+
+**Calls within the class (the file).** Method and class are counted differently:
+
+- **Method level: both variants.** Every internal call is part of a method's `out`, so the
+  **all-calls** variant counts calls to methods of the same file too, and is the method-level
+  headline. A method can push its logic into private helpers, which makes those calls look like
+  coupling, so the **no-helpers** variant, which leaves out calls to methods declared in the same
+  file, is computed and analysed beside it.
+- **Class level: calls that leave the class only, inputs that can enter it only.** Calls
+  between a class's own methods are logic inside the class, like the logic inside a method, not
+  coupling of the class: a class's `out` counts only calls to methods declared in **another**
+  file. A class's `in` counts only the methods that can be called from outside it, private
+  methods never. Two input variants, both computed and analysed:
+  - **non-private (primary):** `public`, `protected` and package-private methods, everything
+    callable from outside the file;
+  - **public:** `public` methods only.
 
 ## The leaf exemption and the score
 
@@ -106,37 +155,55 @@ A negative divergence marks a **catchment**: a leaf that receives data and proce
 is where the complexity of an algorithm belongs. Such a method is exempt. Zero (a pipe) and
 positive (a junction) count, with complexity weighted by how much more it hands on:
 
-```
-fD(m) = max(d(m) + 1, 0)     # divergence factor: d < 0 → 0;  d = 0 → 1;  d = k > 0 → k + 1
-fO(m) = out(m) + 1           # outgoing factor (the petclinic observation)
-```
-
-For **every** method complexity field X of paper one, three forms of the signal:
+For each coupling definition k:
 
 ```
-X          complexity alone (paper one's signal, unchanged)
-X·D(m)   = X(m) × fD(m)
-X·O(m)   = X(m) × fO(m)
+fD_k(m) = max(d_k(m) + 1, 0)   # divergence factor: d < 0 → 0;  d = 0 → 1;  d = j > 0 → j + 1
+fO_k(m) = out_k(m) + 1         # outgoing factor (the petclinic observation)
 ```
 
-and the coupling factors on their own: `D = fD` and `O = fO`. Class signals aggregate each
-method form exactly as paper one aggregates X (`_sum`, `_mean`, `_max`), so `cognitive·D_max`
-is the largest `cognitive × fD` over the file's methods. `nom` has no method form and stays
-complexity alone.
+For **every** method complexity field X of paper one, and every definition k, the forms of the
+signal:
 
-**`params` and D.** `params` is the method's `in`, which `fD` already contains, so `params·D`
-counts the parameters twice. It is measured and reported but **excluded** from the primary
-choice below.
+```
+X           complexity alone (paper one's signal, unchanged)
+X·D_k(m)  = X(m) × fD_k(m)
+X·O_k(m)  = X(m) × fO_k(m)
+```
+
+and the coupling factors on their own: `D_k = fD_k` and `O_k = fO_k`.
+
+**Class forms.** Two ways to weight a class, each with both input variants:
+
+- **A. The class as one unit (primary).** The class has its own coupling, and it weights each
+  of paper one's 31 class signals X_c (`nom` included):
+
+  ```
+  in_k(C)  = Σ in_k(m)  over the methods of C callable from outside (non-private, or public)
+  out_k(C) = Σ out_k(m) over all methods of C, counting calls that leave C only
+  d_k(C)   = out_k(C) − in_k(C)
+  X_c·D_k(C) = X_c(C) × max(d_k(C) + 1, 0)        X_c·O_k(C) = X_c(C) × (out_k(C) + 1)
+  ```
+
+  A class with a wide callable surface that sends little out is a catchment; one with a narrow
+  surface that sends much out is a junction.
+- **B. Method forms aggregated (secondary).** Each method's form, with `in_k(m)` counted only if
+  the method is callable from outside the class (else 0) and `out_k(m)` counting calls that
+  leave the class only, aggregated exactly as paper one aggregates X (`_sum`, `_mean`, `_max`):
+  `cognitive·D_flow_max` is the largest `cognitive(m) × fD_flow(m)` over the file's methods.
+  `nom` has no method form under B.
+
+**`params` and D.** `params` is the method's `p`, which every `in_k` already contains, so
+`params·D_k` counts the parameters twice. It is measured and reported but **excluded** from the
+primary choice below.
 
 The exemption is a **hypothesis**, tested by the leaf diagnostic below, not assumed.
 
-**OPEN, structural leaves.** By sign alone, a method with no parameters and no internal calls
-scores d = 0 and is not exempt, though it is a leaf. Alternative: exempt any method with **no
-internal calls** as well as any with d < 0. Pick one; the other is a sensitivity analysis.
-
-**OPEN, class-level `out`.** Whether a class's method forms count every internal call, or only
-calls that leave the class (so a class whose private helpers call each other does not look like
-a hub). The other is a sensitivity analysis.
+**Structural leaves.** A method with no counted calls is a leaf. Under the **flow** and
+**message** definitions it is always a catchment (`out = 0`, `in ≥ 1`, so `d < 0`). Under the
+**data** definition, one with no parameters scores d = 0 and is not exempt: the data view does
+not see calls, so it misses methods with no parameters, by its definition. That difference is
+part of what comparing the definitions shows.
 
 ## The matrix
 
@@ -150,12 +217,14 @@ gives, per level:
 | form | method signals | class signals |
 |---|---|---|
 | complexity alone, X | 10 | 31 |
-| X·D | 10 | 30 |
-| X·O | 10 | 30 |
-| D, O alone | 2 | 6 (`_sum`, `_mean`, `_max` of each) |
+| X·D_k, for 3 definitions | 60 (all calls; no helpers) | A: 186 (31 × 3 × 2 input variants); B: 180 (30 × 3 × 2) |
+| X·O_k, for 3 definitions | 60 (all calls; no helpers) | A: 93 (31 × 3); B: 90 (30 × 3) |
+| D_k, O_k alone, for 3 definitions | 12 (all calls; no helpers) | A: 9; B: 27 (`_sum`, `_mean`, `_max`) |
 
-plus, as a sensitivity, **AND**: a unit flagged by the rule on X **and** by the rule on `d`
-(both outliers, no compensation), for the primary signal only.
+`O_k` does not depend on `in`, so it has no input variants.
+
+plus, as a sensitivity, **AND**: a unit flagged by the rule on X **and** by the rule on `d_k`
+(both outliers, no compensation), for the primary signal and each definition.
 
 The full matrix is reported, labelled by role. Only the comparison below decides.
 
@@ -170,12 +239,36 @@ The full matrix is reported, labelled by role. Only the comparison below decides
 2. **Secondary: MLCQ human Long Method** (method level), same split and aggregation.
 3. **Secondary, tool oracles on a fresh random sample:** PMD GodClass, DECOR Blob and PMD
    NPath (method), on Java repositories drawn by `open-source-repository-sampler` with
-   **seed 3** (seeds 1 and 2 are seen). Repositories that appear in paper one's pilot (seed 1),
-   its seed-2 sample or MLCQ are **excluded** from this sample before measurement. Reported
-   with the ATFD caveat; never the headline.
+   **seed 3** (seeds 1 and 2 are seen), **500 usable** repositories, stratified by tier as the
+   sampler does (paper one's Java supplement targeted 150; this study is Java only, so the
+   sample is larger and its tool-oracle cells narrower). Repositories that appear in paper
+   one's pilot (seed 1), its seed-2 sample or MLCQ are **excluded** from this sample before
+   measurement. Reported with the ATFD caveat; never the headline.
+4. **Secondary, human replication: Fontana's God Class** (Arcelli Fontana et al., *Empirical
+   Software Engineering* 21(3), 2016): 420 manually evaluated God Class instances from 74
+   systems of the Qualitas Corpus, a different team, different systems and an older Java from
+   MLCQ's. Each rule is fitted on the whole system and scored only on the labelled classes;
+   class level only. It is read **only as the paired difference** X\*·D_flow minus X\*, never as
+   an absolute level, because:
+   - its instances are balanced and extreme, so any detector separates them more easily than in
+     real code (Di Nucci et al., SANER 2018); the inflation is on both sides of a paired
+     difference;
+   - its candidates were found by detection tools before they were checked by hand, so it
+     carries some of the tool oracles' circularity;
+   - its code is Qualitas Corpus source archives, not git commits, so the harness measures an
+     archive (its sha256 recorded) in place of a pinned commit.
 
-**OPEN:** a second human Java dataset (Arcelli Fontana et al.'s God Class labels on the
-Qualitas Corpus; Palomba et al.'s Landfill Blob) as a replication oracle.
+   The access terms of the God Class files are checked before measurement and recorded.
+
+**Moved repositories.** Paper one could not fetch 21 MLCQ repositories, 15 of them `eclipse/*`;
+several Eclipse projects appear to have moved to new GitHub organisations. A supplementary list,
+`mlcq-moved-repositories.csv` (old URL, new URL, labelled commit, how the new location was
+found, the date checked), maps each one that has moved to its new location, under one rule: a
+new location is accepted **only if the labelled commit SHA exists there**, so the mapped code is
+the code the reviewers labelled. The list is built from locations and commit SHAs alone,
+before any measurement, and committed before it is used. A mapped repository keeps the half
+(explore or confirm) paper one assigned to its old URL. A repository with no verified new
+location stays a recorded failure. The number mapped, and the labels they carry, are reported.
 
 ## Primary estimand and decision
 
@@ -183,9 +276,12 @@ Qualitas Corpus; Palomba et al.'s Landfill Blob) as a replication oracle.
   paper one's primary families (class: peak and density; never size, never `params`), the
   signal X whose `mad_z` flags maximise the pooled MCC against human Blob over the reviewed
   units. The multiplied form is **not** consulted, so the divergence factor cannot pick a
-  signal it happens to win on. If paper one's chosen signal (`cognitive_max`) is wanted
-  instead, **OPEN:** fix it now and skip the choice.
-- **Estimand:** the pooled (micro) MCC of **X\*·D** minus **X\*** (both by `mad_z`) against
+  signal it happens to win on. The choice, its criterion value for every candidate signal, and
+  the date are written to a file and committed before the confirm half is read. (Paper one's
+  chosen signal, `cognitive_max`, was chosen against PMD's GodClass, not people, so it is not
+  carried over.)
+- **Estimand:** the pooled (micro) MCC of **X\*·D_flow**, class form A with non-private
+  inputs, minus **X\*** (both by `mad_z`), against
   MLCQ human Blob, over the reviewed class units of the MLCQ **confirm** repositories, as a
   paired difference.
 - **Interval:** 95% percentile bootstrap resampling repositories, 2000 resamples, seed 12345
@@ -194,30 +290,39 @@ Qualitas Corpus; Palomba et al.'s Landfill Blob) as a replication oracle.
   divergence factor refines complexity*; upper bound below 0, *it makes it worse*; otherwise *no difference resolved*.
 - **Reported beside it, not deciding:** precision, recall and false-positive rate of each arm
   (the hypothesis predicts higher precision at a small cost in recall); macro MCC; the
-  threshold-free pooled AUC of X\*·D against X\* (modified z versus modified z).
-- **Effective-sample gate:** **OPEN**, set from the explore half before confirm is read
-  (paper one used 40 repositories carrying the definition). Below it, the verdict is marked
-  *underpowered*.
+  threshold-free pooled AUC of X\*·D_flow against X\* (modified z versus modified z).
+- **Effective-sample gate:** set from the explore half before confirm is read. On the MLCQ
+  explore half, the standard deviation `s` of the per-repository paired difference (X\*·D_flow
+  minus X\*, over repositories with at least one reviewed Blob) gives the number of confirm
+  repositories with at least one reviewed Blob needed for a 95% interval of half-width 0.10,
+  `n = (1.96 · s / 0.10)²`, rounded up, and never below 20. The gate, `s` and the date are
+  written to a file and committed with the choice of X\* before the confirm half is read
+  (paper one used 40). Below the gate, the verdict is marked *underpowered*.
 
 ## Pre-registered secondary tests
 
 1. **The leaf diagnostic (the exemption's own test).** Among units X\* flags, the human Blob
-   rate of catchments (d < 0) against the rest, paired bootstrap over repositories. The
+   rate of catchments (d_k < 0; for a class, d_k(C) < 0 under form A) against the rest, for
+   each definition k and input variant, paired bootstrap over repositories. The
    exemption is supported if catchments are called Blob less often (upper bound below 0);
    contradicted if more often; otherwise unresolved. Reported whatever the primary says.
 2. **Independence of the two measures.** Within-repository Spearman correlation of every
-   complexity field with `d` and with `out`. If they track closely, X·D is close to a
-   stretched X; the primary is then re-read within complexity strata (tertiles of X\* per
-   repository) to show `d` adds information beyond X\*.
-3. **X\*·O, D, O and AND** against X\*, same estimand, labelled secondary, no multiplicity
+   complexity field with `d_k` and with `out_k`, for each definition. If they track closely,
+   X·D_k is close to a stretched X; the primary is then re-read within complexity strata
+   (tertiles of X\* per repository) to show `d_flow` adds information beyond X\*.
+3. **X\*·D and X\*·O under the other two definitions, X\*·O_flow, D_k, O_k and AND; the
+   public input variant; class form B** against
+   X\*, same estimand, labelled secondary, no multiplicity
    correction, none can change the primary.
-4. **The matrix, by family.** For every signal and rule, the form (X, X·D, X·O) difference
+4. **The matrix, by family.** For every signal, rule and definition, the form (X, X·D_k, X·O_k) difference
    against X, with intervals, reported as exploratory, with Friedman tests over repositories
    across forms within each family, as paper one did across signals and rules. A claim that
    the factor helps *in general* must hold within a family that is not size.
 5. **Method level:** the same, against MLCQ Long Method, X\* chosen on the structure and
-   density families.
+   density families, on the all-calls variant; the no-helpers variant is reported beside it,
+   with the paired difference between the two.
 6. **Tool oracles** on the seed-3 sample (above).
+7. **Fontana's God Class** (above): the primary's paired difference, and the leaf diagnostic.
 
 ## Does the construct hold up: the consistency analysis
 
@@ -228,22 +333,37 @@ pre-registered with its predictions, and read after the primary.
 
 **Cells.** Every combination of:
 
-- **oracle:** each god definition, textbook or human: MLCQ human Blob and Long Method, PMD
+- **oracle:** each god definition, textbook or human: MLCQ human Blob and Long Method,
+  Fontana's God Class, PMD
   GodClass, DECOR Blob, WMC ≥ 47, PMD NPath, and `brain_method` (internal);
 - **level:** class or method, as the oracle defines;
 - **family** of the complexity signal: size, peak, density (class) or size, structure, density
   (method);
 - **relation:** whether the signal is an **ingredient** of the oracle's definition (paper one's
-  ingredient rule, `study.ingredients`; for example `cc_sum` is WMC) or **not**.
+  ingredient rule, `study.ingredients`; for example `cc_sum` is WMC) or **not**;
+- **coupling definition:** flow, data or message.
+
+Class cells use form A with non-private inputs; form B and the public inputs are reported the
+same way beside them.
 
 **Per cell,** by `mad_z`, three paired micro MCC differences over the cell's repositories, each
 averaged over the signals in the cell:
 
 ```
-ΔD  = MCC(X·D) − MCC(X)       does divergence refine?
-ΔO  = MCC(X·O) − MCC(X)       does outgoing data alone refine?
-ΔDO = MCC(X·D) − MCC(X·O)     does what comes in matter (the sinew's balance)?
+ΔD  = MCC(X·D_k) − MCC(X)        does divergence refine?
+ΔO  = MCC(X·O_k) − MCC(X)        does outgoing coupling alone refine?
+ΔDO = MCC(X·D_k) − MCC(X·O_k)    does what comes in matter (the sinew's balance)?
 ```
+
+and, between definitions in the same oracle, family and relation:
+
+```
+ΔD(flow) − ΔD(data)       does counting the call itself (the control flow) matter?
+ΔD(message) − ΔD(flow)    does treating the first item as the message matter?
+```
+
+each read by its interval: lower bound above 0, the first is better; upper bound below 0, the
+second; otherwise no difference resolved.
 
 **Intervals.** One percentile bootstrap (2000, seed 12345) resamples **repositories** once per
 replicate and recomputes every cell from that replicate, so the dependence between cells (same
@@ -258,8 +378,9 @@ independent evidence.
   circular. Reported, not counted toward the construct.
 - **Counted cells:** non-ingredient cells of every other oracle.
 
-**Predictions (OPEN: the author confirms or changes these before the tag).** If the construct
-holds:
+**Predictions.** Read on the primary
+coupling definition (flow); the same readings on the other two are reported beside them. If
+the construct holds:
 
 1. **P1, refinement.** ΔD > 0 (lower bound above 0) for MLCQ human Blob in the peak and density
    families. These are the families where one complex method makes a class an outlier, which
@@ -297,7 +418,7 @@ sensitivity.
 
 ## Exploration
 
-Measure design (resolution rules, exclusions, the OPEN items that are not fixed by the author)
+Measure design (the implementation of the resolution rules and exclusions)
 may be developed and checked only on: paper one's MLCQ **explore** half, paper one's seed-2
 Java sample (already read in paper one), and the petclinic runs already used in `SINEW.md`.
 Nothing is measured on the MLCQ confirm half or the seed-3 sample before the tag.
@@ -307,7 +428,7 @@ Nothing is measured on the MLCQ confirm half or the seed-3 sample before the tag
 - Java only. Results are for Java; other languages, especially dynamically typed ones where
   call targets cannot be resolved statically, are untested and need labelled data first.
 - The outlier rule and its constant (`mad_z`, 3.5), and the bootstrap (2000, seed 12345).
-- Sample seed 3 for the tool-oracle sample; exclusions as above.
+- Sample seed 3 and 500 usable Java repositories for the tool-oracle sample; exclusions as above.
 - Every analysis after the first confirmatory one is written to a dated
   `analysis.exploratory.<utc>.json`; the confirmatory `analysis.json` is written once and its
   sha256 committed.
@@ -316,7 +437,7 @@ Nothing is measured on the MLCQ confirm half or the seed-3 sample before the tag
 
 ## Procedure
 
-1. Close the OPEN items; commit this plan; tag `plan-v1`.
+1. Commit this plan; tag `plan-v1`.
 2. Build the JavaParser measurer; validate it on the exploration material only; commit.
 3. Measure the MLCQ repositories at their labelled commits (both halves) and draw and measure
    the seed-3 sample. The harness commit is recorded in every row and must not be `-dirty`.
