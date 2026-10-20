@@ -107,7 +107,7 @@ def main(argv=None) -> int:
                     "checked": today})
     with open(args.out, "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=["old_url", "new_url", "commit", "how_found", "new_is_fork",
-                                           "other_verified", "checked"])
+                                           "other_verified", "checked"], lineterminator="\n")
         w.writeheader()
         w.writerows(out)
     print(f"wrote {args.out}: {len(out)} missing, {sum(1 for o in out if o['new_url'])} mapped",
