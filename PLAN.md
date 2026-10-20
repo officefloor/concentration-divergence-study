@@ -162,6 +162,13 @@ run through every analysis below; data and message are pre-registered secondarie
     callable from outside the file;
   - **public:** `public` methods only.
 
+  **Constructors are not inputs of the class.** A constructor is structure, how the class is
+  built, not a way into what it does, so it adds nothing to a class's `in` in either variant.
+  Each input variant is also computed and analysed **with constructors** counted (non-private
+  or public constructors, beside the methods), to show the difference. A constructor is still a
+  method-level unit with its own coupling, the method level is unchanged, and a call to a
+  constructor still counts in `out`. *(Amended; see Amendments, 2.)*
+
 ## The leaf exemption and the score
 
 A negative divergence marks a **catchment**: a leaf that receives data and processes it, which
@@ -192,7 +199,8 @@ and the coupling factors on their own: `D_k = fD_k` and `O_k = fO_k`.
   of paper one's 31 class signals X_c (`nom` included):
 
   ```
-  in_k(C)  = Σ in_k(m)  over the methods of C callable from outside (non-private, or public)
+  in_k(C)  = Σ in_k(m)  over the methods of C callable from outside (non-private, or public;
+                        constructors not counted, or counted in the with-constructors variants)
   out_k(C) = Σ out_k(m) over all methods of C, counting calls that leave C only
   d_k(C)   = out_k(C) − in_k(C)
   X_c·D_k(C) = X_c(C) × max(d_k(C) + 1, 0)        X_c·O_k(C) = X_c(C) × (out_k(C) + 1)
@@ -230,10 +238,11 @@ gives, per level:
 | form | method signals | class signals |
 |---|---|---|
 | complexity alone, X | 10 | 31 |
-| X·D_k, for 3 definitions | 60 (all calls; no helpers) | A: 186 (31 × 3 × 2 input variants); B: 180 (30 × 3 × 2) |
+| X·D_k, for 3 definitions | 60 (all calls; no helpers) | A: 372 (31 × 3 × 4 input variants); B: 360 (30 × 3 × 4) |
 | X·O_k, for 3 definitions | 60 (all calls; no helpers) | A: 93 (31 × 3); B: 90 (30 × 3) |
-| D_k, O_k alone, for 3 definitions | 12 (all calls; no helpers) | A: 9; B: 27 (`_sum`, `_mean`, `_max`) |
+| D_k, O_k alone, for 3 definitions | 12 (all calls; no helpers) | A: 15; B: 45 (`_sum`, `_mean`, `_max`) |
 
+The 4 input variants are non-private and public, each without and with constructors.
 `O_k` does not depend on `in`, so it has no input variants.
 
 plus, as a sensitivity, **AND**: a unit flagged by the rule on X **and** by the rule on `d_k`
@@ -303,13 +312,17 @@ holds the commit. A matching SHA means the same code, whoever holds it.
   chosen signal, `cognitive_max`, was chosen against PMD's GodClass, not people, so it is not
   carried over.)
 - **Estimand:** the pooled (micro) MCC of **X\*·D_flow**, class form A with non-private
-  inputs, minus **X\*** (both by `mad_z`), against
+  methods as inputs (constructors not counted), minus **X\*** (both by `mad_z`), against
   MLCQ human Blob, over the reviewed class units of the MLCQ **confirm** repositories, as a
   paired difference.
 - **Interval:** 95% percentile bootstrap resampling repositories, 2000 resamples, seed 12345
   (paper one's).
 - **Reading (superiority, since the claim is a refinement):** lower bound above 0, *the
   divergence factor refines complexity*; upper bound below 0, *it makes it worse*; otherwise *no difference resolved*.
+- **With constructors, reported beside it, not deciding:** the same estimand with
+  constructors counted in the class's inputs, marked **agrees** or **differs** with the
+  primary reading, and the paired difference between the two arms (methods only minus with
+  constructors).
 - **Reported beside it, not deciding:** precision, recall and false-positive rate of each arm
   (the hypothesis predicts higher precision at a small cost in recall); macro MCC; the
   threshold-free pooled AUC of X\*·D_flow against X\* (modified z versus modified z).
@@ -333,7 +346,7 @@ holds the commit. A matching SHA means the same code, whoever holds it.
    X·D_k is close to a stretched X; the primary is then re-read within complexity strata
    (tertiles of X\* per repository) to show `d_flow` adds information beyond X\*.
 3. **X\*·D and X\*·O under the other two definitions, X\*·O_flow, D_k, O_k and AND; the
-   public input variant; class form B** against
+   public input variant and both input variants with constructors; class form B** against
    X\*, same estimand, labelled secondary, no multiplicity
    correction, none can change the primary.
 4. **The matrix, by family.** For every signal, rule and definition, the form (X, X·D_k, X·O_k) difference
@@ -365,8 +378,9 @@ pre-registered with its predictions, and read after the primary.
   ingredient rule, `study.ingredients`; for example `cc_sum` is WMC) or **not**;
 - **coupling definition:** flow, data or message.
 
-Class cells use form A with non-private inputs; form B and the public inputs are reported the
-same way beside them.
+Class cells use form A with non-private methods as inputs; form B and the public inputs are
+reported the same way beside them. The whole analysis is also run with constructors counted in
+the inputs, and its verdict is marked **agrees** or **differs**.
 
 **Per cell,** by `mad_z`, three paired micro MCC differences over the cell's repositories, each
 averaged over the signals in the cell:
@@ -493,3 +507,26 @@ was made.
    diagnostics only. No MLCQ repository and no seed-3 repository had been measured, and no
    score had been computed against any oracle.
 
+2. **20 October 2026: constructors are not inputs of the class; calls are resolved for up to
+   8 hours** (Units and measures, Calls within the class; The leaf exemption and the score,
+   class form A; The matrix; Primary estimand; the consistency analysis; secondary 3). As registered, a class's `in` summed every
+   non-private (or public) callable, constructors included. A constructor is structure: it
+   builds the object, and it is not a way into what the class does, so a class whose
+   constructor takes many dependencies is not, by that, receiving data its behaviour consumes.
+   The primary and every input variant now count methods only. Each variant is also computed
+   and analysed with constructors counted, reported beside it and marked agrees or differs. The
+   method level is unchanged (a constructor is a unit with its own coupling), and calls to
+   constructors still count in `out`. The change was made by the author on these conceptual
+   grounds. With it, the measurer's time budget for resolving calls, which the plan did not
+   state, is set at **8 hours per repository** (it was 1 hour): a call met after the budget is
+   spent cannot be found internal, so its `out` is lost, and the loss falls on the files
+   measured last. openjdk/jdk, the largest Java repository, measured during validation, spent
+   1 hour with 22% of its calls not yet resolved. A repository that still spends the 8 hours is
+   kept and listed in the diagnostics, and the primary is also reported without such
+   repositories, as a sensitivity. Seen when amended: Amendment 1's material; a dry run of
+   the harness (scoring and the check analysis) on 8 repositories of the MLCQ **explore** half, in scratch directories,
+   whose primary was not estimable (4 repositories with a reviewed Blob); and, after the
+   decision, to check the code, the constructors' share of the class inputs on those 8
+   repositories (3–30%), with the number of form A catchments under flow rising with
+   constructors counted (most in the two Spring repositories). No repository of the MLCQ
+   confirm half or of the seed-3 sample had been measured.
