@@ -262,6 +262,7 @@ gives, per level:
 | X·O_k, for 3 definitions | 60 (all calls; no helpers) | A: 93 (31 × 3); B: 90 (30 × 3) |
 | X·E_k, X·A_k, for 3 definitions *(Amendments, 4)* | 60 + 60 (all calls; no helpers) | A: 372 + 372 (31 × 3 × 4 input variants) |
 | X·N, the size null *(Amendments, 5)* | – | 30 (every class signal but `nom`) |
+| X·D_k fitted on the non-exempt units only *(Amendments, 7)* | 30 (all calls) | A: 93 (non-private) |
 | D_k, O_k alone, for 3 definitions | 12 (all calls; no helpers) | A: 15; B: 45 (`_sum`, `_mean`, `_max`) |
 
 The 4 input variants are non-private and public, each without and with constructors.
@@ -526,6 +527,26 @@ Repositories declaring a DI framework (Spring, Guice, CDI, Dagger, Micronaut, Qu
 `pom.xml` / `build.gradle`) are counted, and the primary is re-read without them as a labelled
 sensitivity.
 
+**Zeros and the scale** *(Amended; see Amendments, 7)*. Exempt units are zeros of X·D_k. Where
+they are more than half the units the median is 0 and the MAD is 0, and the rule falls to
+paper one's mean-AD fallback, so the two arms of the primary can be read under different
+scale estimators. The scale kind and the zero share of each arm are reported first (above).
+As a labelled sensitivity, the primary arm is also fitted on the **non-exempt units only**
+(fD > 0), the exempt units never flagged: X\*·D_flow so fitted against X\*, and against
+X\*·D_flow fitted on every unit; the same at method level on all calls. It changes no verdict.
+
+**Units without coupling** *(Amended; see Amendments, 7)*. A unit of paper one's that the join
+cannot match, or whose file the measurer cannot parse, carries no coupling: d = 0, both factors
+1, so in the weighted arm it neither drops nor rises while its coupled peers do. The number of
+reviewed units, and of positives, that carry no coupling is reported first, per human
+definition and level; and as a labelled sensitivity the primary is re-read on the reviewed
+classes that carry coupling only (the rule still fitted on every unit). It changes no verdict.
+
+**Outgoing coupling from `throw new`** *(Amended; see Amendments, 7)*. A `throw new T(...)` of a
+repository type is a constructor call and counts in `out`, as registered; SINEW.md records it
+as an artefact on petclinic. The measurer keeps such calls apart, and the share of outgoing
+coupling they carry is reported first, per definition and level. The measure is unchanged.
+
 ## Exploration
 
 Measure design (the implementation of the resolution rules and exclusions)
@@ -655,3 +676,18 @@ was made.
    Amendment 4, before step 7 and before any confirm number exists. Seen when amended: as for
    Amendment 4, and the label counts just given, which are counts of MLCQ's file, not results.
    No repository of the MLCQ confirm half or of the seed-3 sample had been measured.
+
+7. **21 October 2026: three diagnostics and two sensitivities on the measurement**
+   (Diagnostics, read first; The matrix). (a) The rule fitted on the non-exempt units only, as
+   a sensitivity of the primary and of the method-level secondary, because exempt units are
+   zeros and can move the modified z to its mean-AD fallback in one arm and not the other.
+   (b) The reviewed and positive units that carry no coupling are counted, and the primary is
+   re-read on the coupled reviewed classes only, because an uncoupled unit is a pipe by
+   default and is neither exempted nor amplified while its peers are. (c) The measurer records
+   a `new` that is the expression of a `throw` as its own call kind (counted in `out` exactly
+   as before), so the share of outgoing coupling that is `throw new` is reported; the fixture
+   the measurer is checked against before every run now holds one. No measure, estimand or
+   verdict changes. Made on the same review as Amendment 4. Seen when amended: as for
+   Amendment 4. No repository of the MLCQ confirm half or of the seed-3 sample had been
+   measured; the two validation repositories of Procedure 2 are measured again by step 2 with
+   the rebuilt measurer and the 8-hour budget.
