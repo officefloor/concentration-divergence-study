@@ -104,11 +104,18 @@ def test_form_registry_counts_match_the_plan():
 
 
 def test_extra_exclusion_rule():
-    assert files.extra_exclusion("app/src/androidTest/java/a/B.java") == "androidTest"
-    assert files.extra_exclusion("x/build/generated/A.java") == "build"
-    assert files.extra_exclusion("src/main/java/org/x/target/A.java") == "target"   # any depth
-    assert files.extra_exclusion("src/main/java/a/build.java") is None              # a file name
-    assert files.extra_exclusion("src/main/java/a/A.java") is None
+    assert files.extra_exclusion("app/src/androidTest/java/a/B.java", "a") == "androidTest"
+    assert files.extra_exclusion("x/build/generated/a/A.java", "a") == "build"       # any depth
+    assert files.extra_exclusion("core/build/gen/mindustry/A.java", "mindustry") == "build"
+    # a package named build or target is a package, not a build directory (PLAN.md, Amendments)
+    assert files.extra_exclusion("gradle/plugins/antora/src/main/java/org/x/build/antora/A.java",
+                                 "org.x.build.antora") is None
+    assert files.extra_exclusion("src/main/java/org/x/target/A.java", "org.x.target") is None
+    # no package, or one that does not match the directory: the whole directory is checked
+    assert files.extra_exclusion("src/main/java/org/x/target/A.java", "") == "target"
+    assert files.extra_exclusion("src/main/java/org/x/target/A.java", "other.pkg") == "target"
+    assert files.extra_exclusion("src/main/java/a/build.java", "a") is None           # a file name
+    assert files.extra_exclusion("src/main/java/a/A.java", "a") is None
 
 
 @pytest.mark.skipif(not os.path.isfile(pins.MEASURER_JAR), reason="the measurer is not built")

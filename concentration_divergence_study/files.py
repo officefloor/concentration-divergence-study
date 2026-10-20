@@ -1,12 +1,16 @@
 """The analysed sources: paper one's file rule, plus the plan's extra exclusions, applied to the
 checkout itself before anything is measured.
 
-PLAN.md, Analysed sources: on top of paper one's rule (which already leaves out test directories,
-vendored trees, root build directories, generated-by-name and oversize files), both result sets
-drop every `.java` file with a DIRECTORY segment named `androidTest`, `testFixtures` or
+PLAN.md, Analysed sources (as amended, see its Amendments): on top of paper one's rule (which
+already leaves out test directories, vendored trees, root build directories, generated-by-name
+and oversize files), both result sets drop every `.java` file whose SOURCE ROOT (its directory
+less the path of its `package` declaration) has a segment named `androidTest`, `testFixtures` or
 `integrationTest`, or `build`, `target`, `generated`, `generated-sources`, `out` or `bin`, at
-any depth. The files are deleted from the (temporary) clone before paper one's extractor, PMD,
-CK and the coupling measurer run, so every tool sees the same file set and paper one's code runs
+any depth. A segment inside the package path is a package name (`org.springframework.restdocs
+.build`), not a build directory, and does not exclude. A file whose directory does not end in
+its package path (or that declares none) has its whole directory checked. The files are
+deleted from the (temporary) clone before paper one's extractor, PMD, CK and the coupling
+measurer run, so every tool sees the same file set and paper one's code runs
 unchanged. What was deleted is counted per segment and listed, and labels on deleted files are
 counted as out of scope (measure.py).
 
@@ -21,11 +25,34 @@ import re
 from . import pins
 
 
-def extra_exclusion(rel: str) -> str | None:
-    """The segment that excludes a repo-relative `.java` path under the plan's extra rule, or None."""
+_PACKAGE = re.compile(r"(?m)^\s*package\s+([\w.]+)\s*;")
+
+
+def package_of(path: str) -> str:
+    """The package a Java file declares ("" for none or an unreadable file)."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            m = _PACKAGE.search(fh.read())
+    except OSError:
+        return ""
+    return m.group(1) if m else ""
+
+
+def source_root_segments(rel: str, package: str) -> list[str]:
+    """The directory segments of a repo-relative file above its package path."""
+    dirs = rel.replace(os.sep, "/").split("/")[:-1]
+    pkg = package.split(".") if package else []
+    if pkg and len(dirs) >= len(pkg) and dirs[len(dirs) - len(pkg):] == pkg:
+        return dirs[:len(dirs) - len(pkg)]
+    return dirs
+
+
+def extra_exclusion(rel: str, package: str = "") -> str | None:
+    """The segment that excludes a repo-relative `.java` path under the plan's extra rule, or
+    None. Only the source root's segments are checked (see the module docstring)."""
     if not rel.endswith(".java"):
         return None
-    for seg in rel.replace(os.sep, "/").split("/")[:-1]:
+    for seg in source_root_segments(rel, package):
         if seg in pins.EXTRA_TEST_SEGMENTS or seg in pins.EXTRA_BUILD_SEGMENTS:
             return seg
     return None
@@ -42,7 +69,7 @@ def prune(root: str) -> dict:
             if not fn.endswith(".java"):
                 continue
             rel = os.path.relpath(os.path.join(dirpath, fn), root).replace(os.sep, "/")
-            seg = extra_exclusion(rel)
+            seg = extra_exclusion(rel, package_of(os.path.join(dirpath, fn)))
             if seg is None:
                 continue
             os.remove(os.path.join(dirpath, fn))

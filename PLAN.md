@@ -133,6 +133,12 @@ the units and fields that drive the difference, and does not change the joined v
     (paper one skipped build directories only at the root, which let Mindustry's generated
     code in).
 
+  Both lists are matched against the file's **source root**: its directory less the path of
+  its `package` declaration. A segment inside the package path is a package name, not a
+  directory of the build, and does not exclude; a file whose directory does not end in its
+  package path, or that declares none, has its whole directory checked. *(Amended; see
+  Amendments, 1.)*
+
   The extractor and its measures are unchanged; only the file set differs from paper one's,
   so the units each rule is fitted on can differ. MLCQ labels on dropped files are out of
   scope, and their number is reported.
@@ -467,3 +473,23 @@ Nothing is measured on the MLCQ confirm half or the seed-3 sample before the tag
 The author created OfficeFloor. This study does not compare frameworks and samples repositories
 at random; the interest is declared because the coupling construct comes from the same line of
 work (`SINEW.md`).
+
+## Amendments
+
+Each amendment is its own commit after the tag `plan-v1`, stating what had been seen when it
+was made.
+
+1. **20 October 2026: the extra file rule is matched against the source root, not the whole
+   path** (Units and measures, Analysed sources). Found while validating the measurer on the
+   exploration material (Procedure 2), on paper one's seed-2 Java sample: matched at any depth
+   of the whole path, `build` deleted 13 files of spring-projects/spring-restdocs whose
+   *package* is `org.springframework.restdocs.build` (Gradle plugin code, under
+   `gradle/plugins/*/src/main/java`), and `target` would delete every class of a package such
+   as Spring's `org.springframework.aop.target`. The rule was written to drop build output and
+   generated sources; a package name is neither. Matching only the source root keeps the
+   intent: `core/build/generated/...`, `target/generated-sources/...` and an `androidTest`
+   root are still dropped. Seen when amended: the validation runs on two repositories of
+   paper one's seed-2 Java sample (spring-restdocs and FlowDroid), which report measurer
+   diagnostics only. No MLCQ repository and no seed-3 repository had been measured, and no
+   score had been computed against any oracle.
+
