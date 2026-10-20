@@ -1,8 +1,7 @@
-# Pre-registered analysis plan (DRAFT, not registered)
+# Pre-registered analysis plan
 
-> **Status (20 October 2026): registered when this file is committed and tagged
-> (`plan-v1`).** No measurement code exists yet, and none is to be written against data
-> before the tag except on the exploration material named under *Exploration*.
+> **Status (20 October 2026): registered, tag `plan-v1`.** No measurement code existed at
+> registration. Any later change to this plan is its own commit after the tag.
 
 ## The question
 
@@ -50,6 +49,14 @@ Stated so a reader can judge what could have shaped it:
   later change to this plan is its own commit, and the commit adding paper one's
   `mlcq-hashes.txt` dates the MLCQ results. A change made after that date is visible as such
   and can be judged on its diff.
+- **Part of paper one's step 5 output was seen before registration,** while checking that the
+  run was progressing: its primary against the PMD GodClass oracle on the MLCQ repositories
+  (verdict inconclusive), the explore-half choice for the Brain Method oracle (`cognitive`), the
+  last lines of its exploratory method-level summary, and about ten lines that an earlier,
+  crashed run printed (a ranking against the PMD oracle on the MLCQ repositories, and
+  exploratory CK and DECOR lines). **No result against the human labels** (Blob or Long
+  Method) was seen. Changes to the plan made after that output appeared are dated in the
+  commit history.
 - **Exploratory petclinic observations** (the role shares are in
   [`SINEW.md`](SINEW.md)): on AI-evolved petclinic code, the **outgoing** arguments
   carried the signal for later outlier status and the balance (out − in) added little. That observation was seen first, so the
