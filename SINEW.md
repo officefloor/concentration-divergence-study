@@ -152,6 +152,26 @@ request's data is still passed method to method.
   "p% of classes must have M ≤ k") and benchmark-derived thresholds (Alves et al. 2010) derive a
   constant from a corpus of systems, as did Lanza and Marinescu's. None fits each codebase on its
   own scale.
+- **Inequality of metrics** (Vasa, Lumpe, Branch and Nierstrasz, ICSM 2009; Serebrenik and
+  van den Brand, ICSM 2010): the Gini coefficient and the Theil index summarise how unevenly a
+  metric is spread across a system, and Gini values stay high and stable as systems evolve.
+  They measure concentration for the system as a whole; this study names the units that hold
+  it and asks whether coupling tells good concentration from bad.
+- **Parameters and coupling** (Murgia, Tonelli, Concas, Marchesi and Counsell, *Journal of
+  Object Technology* 2012): add and remove parameter refactorings fall on classes with high
+  fan-in and fan-out, and the fan-in and fan-out distributions persist after them. Parameters
+  and coupling move together, as the data definition assumes.
+- **Human judgement of god classes** (Schumacher et al., ESEM 2010; Santos and Mendonça, SEKE
+  2014): developers agree with each other poorly on god classes, metric-based detectors compare
+  well with them, and in Santos and Mendonça's experiments coupling mattered more to the
+  participants' judgements than size or complexity. Coupling as an ingredient follows how
+  people judge.
+- **MLCQ** (Madeyski and Lewowski, EASE 2020): professional developers' reviews of Java open
+  source code, labelled without given smell definitions; the primary oracle here. Trained
+  classifiers on it reach a median MCC of 0.51 for Blob and 0.81 for Long Method (Madeyski and
+  Lewowski, *Information and Software Technology* 2023). Those models learn from the labels;
+  the rules here are fitted to each codebase without them, so the figures are a reference
+  point, not a baseline to beat.
 - **Facades and proxies**: classes with high fan-out but one responsibility are known false
   positives of coupling-based god class detection; an exemption is needed from that side too.
 - **System complexity** (Card and Glass 1990): structural (fan-out²) plus data complexity; a

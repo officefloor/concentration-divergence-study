@@ -265,10 +265,19 @@ several Eclipse projects appear to have moved to new GitHub organisations. A sup
 `mlcq-moved-repositories.csv` (old URL, new URL, labelled commit, how the new location was
 found, the date checked), maps each one that has moved to its new location, under one rule: a
 new location is accepted **only if the labelled commit SHA exists there**, so the mapped code is
-the code the reviewers labelled. The list is built from locations and commit SHAs alone,
-before any measurement, and committed before it is used. A mapped repository keeps the half
-(explore or confirm) paper one assigned to its old URL. A repository with no verified new
-location stays a recorded failure. The number mapped, and the labels they carry, are reported.
+the code the reviewers labelled. Where several locations verify, the one chosen is the
+project's own organisation (the old owner, or an owner named after it, as `eclipse-dltk` for
+`eclipse`), then one that is not a fork, then the most stars; the others are listed. The
+script is `scripts/find_moved_repositories.py`. The list is built from locations and commit
+SHAs alone, before any measurement, and is committed with this plan. A mapped repository keeps
+the half (explore or confirm) paper one assigned to its old URL. A repository with no verified
+new location stays a recorded failure. The number mapped, and the labels they carry, are
+reported.
+
+The list holds 23 repositories: the 21, and `apache/ctakes` and `apache/uima-ruta`, whose URLs
+remain but no longer hold the labelled commit. All 23 verified: 10 at the project's own
+organisation (`eclipse-*`), 13 at copies held by others, where no other location searched
+holds the commit. A matching SHA means the same code, whoever holds it.
 
 ## Primary estimand and decision
 

@@ -1,0 +1,24 @@
+old_url,new_url,commit,how_found,new_is_fork,other_verified,checked
+https://github.com/apache/axis1-java,https://github.com/cspeckmim/axis1-java,7043f1ab0397d1ae35f879f2bcc99be1e9b55644,search 'axis1-java',False,,2026-10-20
+https://github.com/apache/axis2-java,https://github.com/fluetm/axis2-java,372582df483eb7991f85b6d0e765aec62339cdb7,search 'axis2-java',False,,2026-10-20
+https://github.com/apache/ctakes,https://github.com/peistation/ctakes,79be3ba2833857714bb301449f021cca36f373e6,search 'ctakes',False,,2026-10-20
+https://github.com/apache/uima-ruta,https://github.com/chagge/uima-ruta,08efb111a775b4ba01cf048ac699aa9c22188325,search 'uima-ruta',False,,2026-10-20
+https://github.com/apache/webservices-xmlschema,https://github.com/alexandrklimov/webservices-xmlschema,f189e891c88298f52f92cfe8f24dccb809e05607,search 'webservices-xmlschema',False,,2026-10-20
+https://github.com/apache/wss4j,https://github.com/kshtzsharma48/wss4j,5c2cbd7e7377296edab02ab79fc98b84fb47f825,search 'wss4j',False,,2026-10-20
+https://github.com/eclipse/acceleo,https://github.com/eclipse-acceleo/acceleo,3b0576ceff41c61c97f94fba4020adbab691bd68,search 'acceleo',False,akoita/acceleo,2026-10-20
+https://github.com/eclipse/bpmn2-modeler,https://github.com/hiendang/bpmn2-modeler,fce8426d782272ee848251d954c98091bea0631c,search 'bpmn2-modeler',False,9yx/org.eclipse.bpmn2-modeler cristianritter/test-smells-bpmn2-modeler,2026-10-20
+https://github.com/eclipse/dltk.core,https://github.com/eclipse-dltk/dltk.core,ff5ee79db0c2234347cb3f956de9b31047f43613,search 'dltk.core',False,earlyster/dltk.core,2026-10-20
+https://github.com/eclipse/eclipse.jdt.core,https://github.com/eclipse-jdt/eclipse.jdt.core,24d47c292ed4bd8fdc28b3c2f9afdab1401d025c,search 'eclipse.jdt.core',False,eclipse-aspectj/eclipse.jdt.core eclipseguru/eclipse.jdt.core-index szarnekow/eclipse.jdt.core Halliburton-Landmark/eclipse.jdt.core mairymano/ECLIPSE.JDT.CORE,2026-10-20
+https://github.com/eclipse/eclipse.platform.swt,https://github.com/eclipse-platform/eclipse.platform.swt,bf870e8ff7e54069e96e5c9a74dc84d49a444484,search 'eclipse.platform.swt',False,arunkumart/eclipse.platform.swt diffplug/eclipse.platform.swt,2026-10-20
+https://github.com/eclipse/eclipse.platform.ui,https://github.com/eclipse-platform/eclipse.platform.ui,e3bbb556534a1fb945e1036948325d14a8dd9c7a,search 'eclipse.platform.ui',False,szarnekow/eclipse.platform.ui,2026-10-20
+https://github.com/eclipse/egit,https://github.com/eclipse-egit/egit,45c1839348e50f1835a3f76e306af8d1a190d617,search 'egit',False,abhishekbh/egit,2026-10-20
+https://github.com/eclipse/egit-github,https://github.com/eclipse-egit/egit-github,e9a4057a0cb71f9e659d88f82e6b24e98f74218d,search 'egit-github',False,fsteeg/egit-github wimjongman/egit-github,2026-10-20
+https://github.com/eclipse/jgit,https://github.com/eclipse-jgit/jgit,00523f38a19b073990239b0f837efa14197764c7,search 'jgit',False,terabyte/jgit,2026-10-20
+https://github.com/eclipse/linuxtools,https://github.com/eclipse-linuxtools/org.eclipse.linuxtools,11865e6e7d86a9d2e63c7b25605f6055875e63ad,search 'linuxtools',False,overholt/linuxtools,2026-10-20
+https://github.com/eclipse/m2e-core,https://github.com/eclipse-m2e/m2e-core,7400bf563885fdf122aaccf356c398a0a9120ffa,search 'm2e-core',False,jaloncad/m2e-core atanasenko/m2e-core-old,2026-10-20
+https://github.com/eclipse/nebula.widgets.nattable,https://github.com/webcane/nebula.widgets.nattable,02b4aba0e0b6998077b40e7d3f892743f7005023,search 'nebula.widgets.nattable',False,,2026-10-20
+https://github.com/eclipse/rap,https://github.com/bsi-software/rap,6295da95d01da6669c91bd4b058db9b89f35abaf,search 'rap',False,,2026-10-20
+https://github.com/eclipse/titan.EclipsePlug-ins,https://github.com/alexnatch/titan.EclipsePlug-ins,92bae808bfd4757c9a2f7cc0e59cd17ad801394c,search 'titan.EclipsePlug-ins',False,cristianritter/test-smells-titan.EclipsePlug-ins,2026-10-20
+https://github.com/eclipse/webtools.sourceediting,https://github.com/nsandonato/webtools.sourceediting,fe6d03fa6ca31c9e5ebeba67b32f14d14335657d,search 'webtools.sourceediting',False,,2026-10-20
+https://github.com/epam/DLab,https://github.com/RomanGlova/DLab,34483ee52cf8b79c4e51a54c82171564e5b8d50a,search 'DLab',False,,2026-10-20
+https://github.com/salesforce/Argus,https://github.com/bsura/Argus,121b59a268da264316cded6a3e9271366a23cd86,search 'Argus',False,,2026-10-20
