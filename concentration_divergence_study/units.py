@@ -21,7 +21,11 @@ INTERNAL call c (resolved to an analysed file), a(c) arguments:
 another file only (its no-helpers variant, which is also what leaves the class at class level).
 A class's `in` sums the `in` of its methods callable from outside the file: non-private (the
 primary input variant) or public; the methods of anonymous and local classes are not members
-callable from outside. A unit of paper one's that the join cannot match carries no coupling
+callable from outside. Constructors are structure, how the class is built, not a way into what
+it does, so they add nothing to the class's `in` (PLAN.md, Amendments, 2); each input variant is
+also computed with them counted (`np+ctor`, `pub+ctor`) to show the difference. A constructor
+is still a method-level unit with its own coupling, and calls to constructors still count in
+`out`. A unit of paper one's that the join cannot match carries no coupling
 (in = out = 0, so d = 0 and both factors are 1: its complexity is unweighted), and so does a file
 the measurer could not parse; both are counted in the diagnostics.
 """
@@ -38,6 +42,8 @@ from complexity_concentration_study import study as p1
 from . import javaparser, measure
 
 DEFS = ("flow", "data", "message")
+# The class input variants: non-private (primary) or public methods, without and with constructors.
+INPUTS = ("np", "pub", "np+ctor", "pub+ctor")
 METHOD_FIELDS = tuple(p1_extract.COMPLEXITY_FIELDS)
 CLASS_SIGNALS = tuple(p1_metrics.CLASS_SIGNALS)
 AGGS = tuple(p1_metrics.AGGREGATIONS)
@@ -77,16 +83,23 @@ class Level:
         self.oracles: dict = {}          # name -> (positives mask, universe mask)
         self.coupled = np.zeros(self.n, bool)
         # method level: p, in_k, out_all_k, out_leave_k, callable masks, file index
-        # class level: in_k (np / pub), out_k
+        # class level: in_{input}_k, out_k
         self.c: dict = {}
 
     def add_oracle(self, name, pos_mask, univ_mask=None):
         self.oracles[name] = (pos_mask, univ_mask if univ_mask is not None else np.ones(self.n, bool))
 
 
+def _callable(m: dict) -> dict:
+    """{input variant: whether the method counts toward its class's `in`}."""
+    outside = not m["local"]
+    method = m.get("kind") != "ctor"
+    np_, pub = outside and m["vis"] != "private", outside and m["vis"] == "public"
+    return {"np": np_ and method, "pub": pub and method, "np+ctor": np_, "pub+ctor": pub}
+
+
 def _method_coupling(m: dict, file_idx: int) -> dict:
-    out = {"p": m["params"], "callable_np": (m["vis"] != "private") and not m["local"],
-           "callable_pub": (m["vis"] == "public") and not m["local"]}
+    out = {"p": m["params"], **{f"callable_{i}": v for i, v in _callable(m).items()}}
     for k in DEFS:
         all_, leave = 0, 0
         for a, _kind, res, tidx in m["calls"]:
@@ -107,8 +120,8 @@ def _method_arrays(level: Level, coup: list) -> None:
     p = np.array([c["p"] if c else 0 for c in coup], dtype=float)
     level.coupled = np.array([c is not None for c in coup], bool)
     level.c["p"] = p
-    level.c["callable_np"] = np.array([bool(c and c["callable_np"]) for c in coup])
-    level.c["callable_pub"] = np.array([bool(c and c["callable_pub"]) for c in coup])
+    for i in INPUTS:
+        level.c[f"callable_{i}"] = np.array([bool(c and c[f"callable_{i}"]) for c in coup])
     for k in DEFS:
         inn = coupling_in(p, k)
         inn[~level.coupled] = 0
@@ -121,7 +134,7 @@ def _method_arrays(level: Level, coup: list) -> None:
 def _class_coupling(level: Level, methods_by_file: dict) -> None:
     """Form A coupling of each file from all the measurer's methods in it."""
     for k in DEFS:
-        for key in ("in_np", "in_pub", "out"):
+        for key in [f"in_{i}" for i in INPUTS] + ["out"]:
             level.c[f"{key}_{k}"] = np.zeros(level.n)
     coupled = np.zeros(level.n, bool)
     for i, f in enumerate(level.ids):
@@ -133,10 +146,9 @@ def _class_coupling(level: Level, methods_by_file: dict) -> None:
             mc = _method_coupling(m, fidx)
             for k in DEFS:
                 ink = float(coupling_in(np.array([mc["p"]], float), k)[0])
-                if mc["callable_np"]:
-                    level.c[f"in_np_{k}"][i] += ink
-                if mc["callable_pub"]:
-                    level.c[f"in_pub_{k}"][i] += ink
+                for inp in INPUTS:
+                    if mc[f"callable_{inp}"]:
+                        level.c[f"in_{inp}_{k}"][i] += ink
                 level.c[f"out_{k}"][i] += mc[f"out_leave_{k}"]
     level.coupled = coupled
 

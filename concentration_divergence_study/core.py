@@ -94,8 +94,8 @@ def compare(pop: Population, x: str, y: str, rule: int = MAD) -> dict:
 
 
 def primary_arm(level: str, x: str, k: str = "flow", variant: str | None = None) -> str:
-    """The name of X*D_k in the primary form: class form A with non-private inputs; method,
-    all calls (or the variant given)."""
+    """The name of X*D_k in the primary form: class form A with non-private methods as inputs
+    (constructors not counted); method, all calls (or the variant given)."""
     if level == "class":
         return forms.name(("XD_A", x, k, variant or "np"))
     return forms.name(("XD", x, k, variant or "all"))

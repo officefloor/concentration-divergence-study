@@ -90,16 +90,14 @@ def score_level(level: str, S: dict) -> dict:
     zero = np.zeros(nf, np.float32)
     grouper = forms.Grouper(S["method"].c["file"], L.ids) if level == "class" else None
     x_masks: dict = {}
-    d_masks: dict = {}
+    form_masks: dict = {}                    # the d and O forms' masks, for the AND forms
     vectors_kept: dict = {}
     keep = set(forms.CLASS_CANDIDATES if level == "class" else forms.METHOD_CANDIDATES)
     for fi, spec in enumerate(specs):
         if L.n == 0:
             break
-        if spec[0] == "AND":
-            if spec[2] not in d_masks:
-                d_masks[spec[2]] = rules.all_rules(forms.and_d(level, spec, S))
-            masks = [a & b for a, b in zip(x_masks[spec[1]], d_masks[spec[2]])]
+        if spec[0] in ("AND", "ANDO"):
+            masks = [a & b for a, b in zip(x_masks[spec[1]], form_masks[forms.and_partner(level, spec)])]
             scale[fi], zero[fi] = -1, np.nan
         else:
             v = forms.vector(level, spec, S, grouper).astype(float)
@@ -107,6 +105,8 @@ def score_level(level: str, S: dict) -> dict:
             kind, _ = rules.mad_z_scale(v)
             scale[fi] = SCALE_CODE[kind]
             zero[fi] = float((v == 0).mean())
+            if spec[0] in ("d", "d_A", "O", "O_A"):
+                form_masks[spec] = masks
             if spec[0] == "X":
                 x_masks[spec[1]] = masks
                 if spec[1] in keep:

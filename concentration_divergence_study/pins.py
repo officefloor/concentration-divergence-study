@@ -20,9 +20,12 @@ JAVAPARSER_VERSION = "3.28.2"              # measurer/pom.xml, javaparser.versio
 MEASURER_JAR = os.path.join(PROJECT_ROOT, "measurer", "target", "divergence-measurer.jar")
 # The JVM heap the measurer runs with, and its per-repository time budget for resolving calls:
 # a call met after the budget is spent is recorded as unresolved by budget (resolution 5), so a
-# pathological repository is bounded and the loss is counted, never silent.
+# pathological repository is bounded and the loss is counted, never silent. 8 hours (PLAN.md,
+# Amendments, 2): openjdk/jdk, the largest Java repository, spent a 1-hour budget with 22% of
+# its calls left; a repository that still spends it is kept, and the primary is also read
+# without it (analyse.py, sensitivity).
 MEASURER_HEAP = os.environ.get("CDS_MEASURER_HEAP", "6g")
-MEASURER_BUDGET_SECONDS = 3600
+MEASURER_BUDGET_SECONDS = 8 * 3600
 
 # --- the plan's constants (PLAN.md) ------------------------------------------------------------
 SEED3 = 3                                   # the tool-oracle sample's seed

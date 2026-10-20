@@ -13,19 +13,28 @@ variant v (`all`: every internal call; `nohelp`: calls to another file only):
     X*D_k@v      X x fD_k                                           60
     X*O_k@v      X x fO_k                                           60
     D_k@v, O_k@v the factors alone                                  12
-    X&d_k        AND: flagged by the rule on X and on d_k@all       (the candidates x 3)
+    d_k@v        the divergence d_k itself, by the rule             6
+    X&d_k@v      AND: flagged by the rule on X and on d_k@v         60
+    X&o_k@v      AND: flagged by the rule on X and on O_k@v         60
 
 Class level, for each of paper one's 31 class signals Xc, input variant i (`np`: non-private
-methods; `pub`: public), and, for form B, each base method signal X and aggregation g:
+methods; `pub`: public methods; `np+ctor`, `pub+ctor`: the same with constructors counted, see
+units.py), and, for form B, each base method signal X and aggregation g:
 
     Xc                    complexity alone                                    31
-    Xc*D_k[A,i]           A: the class's own coupling weights Xc              186
+    Xc*D_k[A,i]           A: the class's own coupling weights Xc              372
     Xc*O_k[A]                                                                 93
-    D_k[A,i], O_k[A]                                                          9
-    X*D_k[B,i]_g          B: each method's form, aggregated as paper one      180
+    D_k[A,i], O_k[A]                                                          15
+    X*D_k[B,i]_g          B: each method's form, aggregated as paper one      360
     X*O_k[B]_g                                                                90
-    D_k[B,i]_g, O_k[B]_g                                                      27
-    Xc&d_k[A,np]          AND (the candidates x 3)
+    D_k[B,i]_g, O_k[B]_g                                                      45
+    d_k[A,i]              the class's divergence itself, by the rule          12
+    Xc&d_k[A,i]           AND: flagged by the rule on Xc and on d_k[A,i]      372
+    Xc&o_k[A]             AND: flagged by the rule on Xc and on O_k[A]        93
+
+The AND forms of the candidate signals with the primary variant (`@all`, `[A,np]`) are the
+registered sensitivity; the rest, the divergence alone and the outgoing AND, are the exploratory
+intersection (PLAN.md, Amendments, 3).
 
 Each form is a spec tuple; `name` gives its label and `base` the complexity signal it is built
 from (its family and its ingredient relation follow the base; None for the factors alone).
@@ -36,10 +45,9 @@ import numpy as np
 
 from complexity_concentration_study import metrics as p1_metrics
 
-from .units import AGGS, CLASS_SIGNALS, DEFS, METHOD_FIELDS
+from .units import AGGS, CLASS_SIGNALS, DEFS, INPUTS, METHOD_FIELDS
 
 VARIANTS = ("all", "nohelp")
-INPUTS = ("np", "pub")
 
 # The candidates for X* (PLAN.md, Primary estimand): class, paper one's primary families peak and
 # density, never size, never params; method, structure and density, never params.
@@ -55,7 +63,9 @@ def method_forms() -> list[tuple]:
     out += [("XO", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
     out += [("D", k, v) for k in DEFS for v in VARIANTS]
     out += [("O", k, v) for k in DEFS for v in VARIANTS]
-    out += [("AND", x, k) for x in METHOD_CANDIDATES for k in DEFS]
+    out += [("d", k, v) for k in DEFS for v in VARIANTS]
+    out += [("AND", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
+    out += [("ANDO", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
     return out
 
 
@@ -69,7 +79,9 @@ def class_forms() -> list[tuple]:
     out += [("XO_B", x, g, k) for x in METHOD_FIELDS for g in AGGS for k in DEFS]
     out += [("D_B", g, k, i) for g in AGGS for k in DEFS for i in INPUTS]
     out += [("O_B", g, k) for g in AGGS for k in DEFS]
-    out += [("AND", x, k) for x in CLASS_CANDIDATES for k in DEFS]
+    out += [("d_A", k, i) for k in DEFS for i in INPUTS]
+    out += [("AND", x, k, i) for x in CLASS_SIGNALS for k in DEFS for i in INPUTS]
+    out += [("ANDO", x, k) for x in CLASS_SIGNALS for k in DEFS]
     return out
 
 
@@ -97,15 +109,21 @@ def name(spec: tuple) -> str:
         return f"D_{spec[2]}[B,{spec[3]}]_{spec[1]}"
     if t == "O_B":
         return f"O_{spec[2]}[B]_{spec[1]}"
+    if t == "d":
+        return f"d_{spec[1]}@{spec[2]}"
+    if t == "d_A":
+        return f"d_{spec[1]}[A,{spec[2]}]"
     if t == "AND":
-        return f"{spec[1]}&d_{spec[2]}" + ("[A,np]" if spec[1] in CLASS_SIGNALS else "@all")
+        return f"{spec[1]}&d_{spec[2]}" + (f"[A,{spec[3]}]" if spec[3] in INPUTS else f"@{spec[3]}")
+    if t == "ANDO":
+        return f"{spec[1]}&o_{spec[2]}" + (f"@{spec[3]}" if len(spec) == 4 else "[A]")
     raise ValueError(spec)
 
 
 def base(spec: tuple) -> str | None:
     """The complexity signal a form is built from (at the form's own level)."""
     t = spec[0]
-    if t in ("X", "XD", "XO", "XD_A", "XO_A", "AND"):
+    if t in ("X", "XD", "XO", "XD_A", "XO_A", "AND", "ANDO"):
         return spec[1]
     if t in ("XD_B", "XO_B"):
         return f"{spec[1]}_{spec[2]}"
@@ -191,6 +209,8 @@ def vector(level: str, spec: tuple, S: dict, grouper: Grouper | None = None) -> 
             return fD(method_d(m, spec[1], spec[2]))
         if t == "O":
             return fO(method_out(m, spec[1], spec[2]))
+        if t == "d":
+            return method_d(m, spec[1], spec[2])
         raise ValueError(spec)
     c = S["class"]
     if t == "X":
@@ -203,6 +223,8 @@ def vector(level: str, spec: tuple, S: dict, grouper: Grouper | None = None) -> 
         return fD(class_d(c, spec[1], spec[2]))
     if t == "O_A":
         return fO(c.c[f"out_{spec[1]}"])
+    if t == "d_A":
+        return class_d(c, spec[1], spec[2])
     m = S["method"]
     if t == "XD_B":
         f, _ = _method_B(m, spec[3], spec[4])
@@ -219,8 +241,9 @@ def vector(level: str, spec: tuple, S: dict, grouper: Grouper | None = None) -> 
     raise ValueError(spec)
 
 
-def and_d(level: str, spec: tuple, S: dict) -> np.ndarray:
-    """The divergence an AND form's second rule is fitted on."""
-    if level == "method":
-        return method_d(S["method"], spec[2], "all")
-    return class_d(S["class"], spec[2], "np")
+def and_partner(level: str, spec: tuple) -> tuple:
+    """The form whose rule flags an AND form's second set: the divergence d_k (AND) or the
+    outgoing factor O_k (ANDO), in the AND form's variant."""
+    if spec[0] == "AND":
+        return ("d", spec[2], spec[3]) if level == "method" else ("d_A", spec[2], spec[3])
+    return ("O", spec[2], spec[3]) if level == "method" else ("O_A", spec[2])

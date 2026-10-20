@@ -72,7 +72,7 @@ The plan's order is enforced by the code, not by discipline:
 | coupling: JavaParser with its symbol solver, no build, no dependencies; internal = resolves to an analysed file | `measurer/src/.../Measurer.java` (rules in its header); `javaparser.py` checks it on a fixture before every run |
 | the extra file rule (test roots, build directories at any depth) | `files.py`, applied to the clone before any tool runs |
 | the two result sets, joined (decides) and JavaParser-only (robustness) | `units.py` |
-| flow, data, message; all-calls / no-helpers; class form A (non-private / public) and B | `units.py`, `forms.py` |
+| flow, data, message; all-calls / no-helpers; class form A (non-private / public, without and with constructors) and B; the exploratory intersection (d alone, X AND d, X AND O) | `units.py`, `forms.py` |
 | fD, fO, every form of the matrix, AND | `forms.py` |
 | every rule of paper one at its default constant, fitted on every unit | `rules.py` (exactly paper one's flags: `tests/test_rules.py`) |
 | oracles: MLCQ Blob and Long Method (reviewed units, strict majority, frozen split), seed-3 tool oracles, Fontana | `mlcq.py`, `sample.py`, `fontana.py`; definitions in `units.py` |

@@ -1,6 +1,7 @@
 """The analysis of PLAN.md, in its reporting order (Procedure 6): the diagnostics, the primary,
 the leaf diagnostic, the consistency analysis and its verdict on the construct, the secondaries,
-the sensitivities.
+the sensitivities, and then the exploratory intersection (PLAN.md, Amendments, 3), which decides
+nothing.
 
     cds analyse                  the confirmatory analysis: results/analysis.json, written once,
                                  with its sha256 beside it
@@ -50,6 +51,8 @@ from .explore import CHOICES
 SETS = ("joined", "javaparser")
 CLASS_ORACLES_SEED3 = ("pmd_GodClass", "decor_blob", "wmc47")
 METHOD_ORACLES_SEED3 = ("pmd_method_NPath200", "brain_method")
+# The class input variant with constructors counted, reported beside the primary (PLAN.md, Amendments, 2).
+CTOR = "np+ctor"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -199,15 +202,70 @@ def matrix_by_family(pop: core.Population) -> dict:
 
 
 # ---------------------------------------------------------------------------------------------
+# the exploratory intersection
+# ---------------------------------------------------------------------------------------------
+def _regions(cx: np.ndarray, cd: np.ndarray, ca: np.ndarray) -> dict:
+    """[..., 4] counts (n_univ, n_flagged, n_flagged_positive, n_positive) of the two flag sets X
+    and d and of their intersection, to the counts of every region by inclusion-exclusion."""
+    def mk(f, tp):
+        out = cx.copy()
+        out[..., 1], out[..., 2] = f, tp
+        return out
+    return {"X": cx, "d": cd, "both": ca,
+            "X_only": mk(cx[..., 1] - ca[..., 1], cx[..., 2] - ca[..., 2]),
+            "d_only": mk(cd[..., 1] - ca[..., 1], cd[..., 2] - ca[..., 2]),
+            "either": mk(cx[..., 1] + cd[..., 1] - ca[..., 1], cx[..., 2] + cd[..., 2] - ca[..., 2])}
+
+
+def intersection(pop: core.Population, x: str) -> dict:
+    """PLAN.md, Amendments, 3 (exploratory): the units the rule (mad_z) flags on complexity X and
+    on the coupling divergence d_k, each on its own, and where the definition's positives fall:
+    X only, d only, both (the AND form), either. The same with the outgoing factor O_k in place of
+    d_k. Per definition k and variant (method: all calls, no helpers; class: the four input
+    variants), pooled counts with precision, recall and MCC per region, and paired micro MCC
+    differences against X of `both`, `either` and the second set alone."""
+    level = pop.level
+    out = {"population": pop.label, "n_repos": pop.n, "x": x, "rule": "mad_z", "cells": {}}
+    if pop.n == 0:
+        return out
+    variants = forms.VARIANTS if level == "method" else forms.INPUTS
+    for k in units.DEFS:
+        for v in variants:
+            for second in ("d", "o"):
+                if second == "d":
+                    sv = ("d", k, v) if level == "method" else ("d_A", k, v)
+                    andf = ("AND", x, k, v)
+                elif level == "method":
+                    sv, andf = ("O", k, v), ("ANDO", x, k, v)
+                elif v == "np":                       # O_k[A] has no input variants
+                    sv, andf = ("O_A", k), ("ANDO", x, k)
+                else:
+                    continue
+                cx, cd, ca = (pop.counts(n) for n in (x, forms.name(sv), forms.name(andf)))
+                per = _regions(cx, cd, ca)              # per repository
+                pooled = {r: {"mcc": float(boot.mcc_counts(c.sum(0))), **boot.rates(c.sum(0))}
+                          for r, c in per.items()}
+                cell = {"second": forms.name(sv), "and": forms.name(andf), "pooled": pooled,
+                        "vs_X": {r: boot.micro_diff(cx, per[r], pop.m) for r in ("both", "either", "d")}}
+                for r, iv in cell["vs_X"].items():
+                    cell[f"vs_X_{r}_reading"] = boot.reading(iv, "the second is better", "X is better")
+                key = f"{k}|{v}" + ("" if second == "d" else "|O")
+                out["cells"][key] = cell
+    return out
+
+
+# ---------------------------------------------------------------------------------------------
 # the consistency analysis
 # ---------------------------------------------------------------------------------------------
 def _ingredients(oracle: str) -> set:
     return p1.ingredients(oracle) if oracle in p1.ORACLES else set()
 
 
-def consistency(pops: list[core.Population], set_index: dict, M: dict, set_name: str) -> dict:
+def consistency(pops: list[core.Population], set_index: dict, M: dict, set_name: str,
+                inp: str = "np") -> dict:
     """PLAN.md, Does the construct hold up. pops: the (oracle) populations, each tagged with the
-    measured set it comes from (set_index[label] = (set, positions of its repos in that set))."""
+    measured set it comes from (set_index[label] = (set, positions of its repos in that set)).
+    inp: the class input variant of the class cells (np: non-private methods, the primary)."""
     cells = []
     B = pins.BOOTSTRAP_B
     for pop in pops:
@@ -230,7 +288,7 @@ def consistency(pops: list[core.Population], set_index: dict, M: dict, set_name:
                 for k in units.DEFS:
                     ix = [forms.INDEX[level][s] for s in ss]
                     if level == "class":
-                        iD = [forms.INDEX[level][forms.name(("XD_A", s, k, "np"))] for s in ss]
+                        iD = [forms.INDEX[level][forms.name(("XD_A", s, k, inp))] for s in ss]
                         iO = [forms.INDEX[level][forms.name(("XO_A", s, k))] for s in ss]
                     else:
                         iD = [forms.INDEX[level][forms.name(("XD", s, k, "all"))] for s in ss]
@@ -262,7 +320,7 @@ def consistency(pops: list[core.Population], set_index: dict, M: dict, set_name:
         c.pop("_rep")
         for d in ("dD", "dO", "dDO"):
             c[f"{d}_reading"] = boot.reading(c[d], "the first is better", "the second is better")
-    return {"set": set_name, "cells": cells, "between_definitions": between, "predictions": preds,
+    return {"set": set_name, "class_inputs": inp, "cells": cells, "between_definitions": between, "predictions": preds,
             "verdict": preds["flow"]["verdict"]}
 
 
@@ -447,6 +505,15 @@ def analyse(check: bool = False) -> dict:
         out["primary"][sname] = c
     out["primary"]["javaparser"]["robustness"] = (
         "agrees" if out["primary"]["javaparser"]["reading"] == out["primary"]["joined"]["reading"] else "differs")
+    # 1b. constructors counted in the class's inputs (PLAN.md, Amendments, 2): the same estimand,
+    # marked agrees or differs, and the two arms against each other
+    for sname in SETS:
+        pop = pops[sname]["blob"]
+        w = core.compare(pop, xc, core.primary_arm("class", xc, variant=CTOR))
+        w["constructors"] = "agrees" if w["reading"] == out["primary"][sname]["reading"] else "differs"
+        out["primary"][sname]["with_constructors"] = w
+        out["primary"][sname]["methods_vs_with_constructors"] = core.compare(
+            pop, core.primary_arm("class", xc, variant=CTOR), core.primary_arm("class", xc))
     # 2. the leaf diagnostic
     out["leaf"] = {sname: {f"{k}|{i}": leaf(pops[sname]["blob"], xc, k, i) for k in units.DEFS for i in forms.INPUTS}
                    for sname in SETS}
@@ -465,6 +532,9 @@ def analyse(check: bool = False) -> dict:
             index[pop.label] = (src, [key_pos[src][m["key"]] for m in pop.meta])
             plist.append(pop)
         out["consistency"][sname] = consistency(plist, index, M, sname)
+        w = consistency(plist, index, M, sname, inp=CTOR)
+        w["constructors"] = "agrees" if w["verdict"] == out["consistency"][sname]["verdict"] else "differs"
+        out["consistency"][sname]["with_constructors"] = w
     out["consistency"]["javaparser"]["robustness"] = (
         "agrees" if out["consistency"]["javaparser"]["verdict"] == out["consistency"]["joined"]["verdict"] else "differs")
     # 4. the secondaries
@@ -480,8 +550,9 @@ def analyse(check: bool = False) -> dict:
         arms = [forms.name(("XD_A", xc, k, "np")) for k in ("data", "message")]
         arms += [forms.name(("XO_A", xc, k)) for k in units.DEFS]
         arms += [forms.name(("D_A", k, "np")) for k in units.DEFS] + [forms.name(("O_A", k)) for k in units.DEFS]
-        arms += [forms.name(("AND", xc, k)) for k in units.DEFS]
-        arms += [forms.name(("XD_A", xc, k, "pub")) for k in units.DEFS]
+        arms += [forms.name(("AND", xc, k, "np")) for k in units.DEFS]
+        arms += [forms.name(("XD_A", xc, k, i)) for i in forms.INPUTS if i != "np" for k in units.DEFS]
+        arms += [forms.name(("D_A", k, CTOR)) for k in units.DEFS]
         base, agg = xc.rsplit("_", 1)
         if base in units.METHOD_FIELDS and agg in units.AGGS:
             arms += [forms.name(("XD_B", base, agg, k, i)) for k in units.DEFS for i in forms.INPUTS]
@@ -494,10 +565,14 @@ def analyse(check: bool = False) -> dict:
                        "no_helpers_vs_all": core.compare(P["long"], ym, core.primary_arm("method", xm, variant="nohelp")),
                        "leaf": {k: leaf(P["long"], xm, k, "all") for k in units.DEFS}}
         s["tool_oracles"] = {o: core.compare(P[o], xc, core.primary_arm("class", xc)) for o in CLASS_ORACLES_SEED3}
+        s["tool_oracles_with_constructors"] = {
+            o: core.compare(P[o], xc, core.primary_arm("class", xc, variant=CTOR)) for o in CLASS_ORACLES_SEED3}
         s["tool_oracles"].update({o: core.compare(P[o], xm, ym) for o in METHOD_ORACLES_SEED3})
         s["tool_oracles_caveat"] = ("PMD GodClass contains a coupling measure (ATFD), so agreement is "
                                     "partly circular; tool oracles are never the headline")
         s["fontana"] = {"paired": core.compare(P["fontana"], xc, core.primary_arm("class", xc)),
+                        "paired_with_constructors": core.compare(
+                            P["fontana"], xc, core.primary_arm("class", xc, variant=CTOR)),
                         "leaf": {f"{k}|{i}": leaf(P["fontana"], xc, k, i) for k in units.DEFS for i in forms.INPUTS},
                         "note": "read only as the paired difference, never as an absolute level"}
         sec[sname] = s
@@ -508,8 +583,19 @@ def analyse(check: bool = False) -> dict:
         pop = pops[sname]["blob"]
         no_di = pop.subset(np.array([not m.get("di") for m in pop.meta], bool))
         no_di.label = pop.label + ", without repositories declaring a DI framework"
-        sens[sname] = {"without_di": core.compare(no_di, xc, core.primary_arm("class", xc))}
+        no_budget = pop.subset(np.array([not (m.get("javaparser") or {}).get("budget_exhausted")
+                                         for m in pop.meta], bool))
+        no_budget.label = pop.label + ", without repositories whose call resolution ran out of time"
+        sens[sname] = {"without_di": core.compare(no_di, xc, core.primary_arm("class", xc)),
+                       "without_budget_exhausted": core.compare(no_budget, xc, core.primary_arm("class", xc)),
+                       "budget_exhausted_repos": [m["key"] for m in pop.meta
+                                                  if (m.get("javaparser") or {}).get("budget_exhausted")]}
     out["sensitivity"] = sens
+    # 6. exploratory, deciding nothing: the intersection of the complexity and divergence outliers
+    out["exploratory_intersection"] = {
+        sname: {name: intersection(pop, xm if pop.level == "method" else xc)
+                for name, pop in pops[sname].items() if pop.n}
+        for sname in SETS}
     return out
 
 
@@ -548,6 +634,9 @@ def print_report(a: dict) -> None:
             print(f"     {arm}: MCC {v['mcc']}, precision {v['precision']}, recall {v['recall']}, FPR {v['fpr']}")
         print(f"     macro {_fmt(p['macro'])}; pooled AUC {p['pooled_auc'].get('x')} -> "
               f"{p['pooled_auc'].get('y')}, diff {_fmt(p['pooled_auc'].get('diff'))}; gate {p['gate']}")
+        w = p["with_constructors"]
+        print(f"     with constructors in the inputs: {_fmt(w['micro'])} -> {w['reading']} "
+              f"[{w['constructors']}]; methods only minus with: {_fmt(p['methods_vs_with_constructors']['micro'])}")
     for sname in SETS:
         print(f"\n-- leaf diagnostic [{sname}]")
         for key, v in a["leaf"][sname].items():
@@ -560,12 +649,27 @@ def print_report(a: dict) -> None:
         print(f"     P1 {pr['P1']['holds']} (dD peak {_fmt(pr['P1']['dD'].get('peak'))}, density "
               f"{_fmt(pr['P1']['dD'].get('density'))}); P2 {pr['P2']['holds_human_blob']}; P3 {pr['P3']['reads']}; "
               f"P4 {pr['P4']['dD_positive']}/{pr['P4']['counted_tool_cells']} positive")
+        print(f"     with constructors in the inputs: {c['with_constructors']['verdict'].upper()} "
+              f"[{c['with_constructors']['constructors']}]")
     s = a["secondary"]["joined"]
     print(f"\n-- secondaries [joined]: method {_fmt(s['method']['all_calls']['micro'])} "
           f"(no helpers {_fmt(s['method']['no_helpers']['micro'])}); tool oracles "
           + "; ".join(f"{o} {_fmt(v['micro'])}" for o, v in s["tool_oracles"].items())
           + f"; Fontana {_fmt(s['fontana']['paired']['micro'])}")
-    print(f"-- sensitivity [joined]: without DI {_fmt(a['sensitivity']['joined']['without_di']['micro'])}")
+    sj = a["sensitivity"]["joined"]
+    print(f"-- sensitivity [joined]: without DI {_fmt(sj['without_di']['micro'])}; without the "
+          f"{len(sj['budget_exhausted_repos'])} repositories out of resolution time "
+          f"{_fmt(sj['without_budget_exhausted']['micro'])}")
+    print("\n-- EXPLORATORY intersection [joined], mad_z, flow (decides nothing): positives / flagged per region")
+    for name, it in a["exploratory_intersection"]["joined"].items():
+        c = it["cells"].get("flow|np") or it["cells"].get("flow|all")
+        if not c:
+            continue
+        p = c["pooled"]
+        reg = "  ".join(f"{r} {int(p[r]['tp'])}/{int(p[r]['tp'] + p[r]['fp'])}"
+                        for r in ("X_only", "both", "d_only"))
+        print(f"     {it['population']}: {reg}; of {int(p['X']['n_god'])} positives; MCC X {p['X']['mcc']:.3f}, "
+              f"both {p['both']['mcc']:.3f}, either {p['either']['mcc']:.3f}; both vs X {_fmt(c['vs_X']['both'])}")
 
 
 def main(argv=None) -> int:
