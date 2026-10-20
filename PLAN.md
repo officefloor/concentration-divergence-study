@@ -206,6 +206,13 @@ X·E_k = X × fE_k               X·A_k = X × fA_k           (fD_k = fE_k × fA
 At class level (form A) the same, on the class's `d_k(C)`. They are pre-registered secondaries
 (secondary 8) and they read the mechanism of the primary (Primary estimand and decision).
 
+**The size null** *(Amended; see Amendments, 5)*. The rival explanation of any class-level gain
+is that a Blob is a big class with one complex method: size families are kept out of X\*, but
+`d_k(C)` is a sum over the class's methods, so the factor brings size back. For every class
+signal X_c except `nom`, `X_c·N = X_c × nom` is measured: the same multiplication with the
+class's number of methods, which carries no coupling at all. It is a pre-registered secondary
+(secondary 9), read beside the primary.
+
 **Class forms.** Two ways to weight a class, each with both input variants:
 
 - **A. The class as one unit (primary).** The class has its own coupling, and it weights each
@@ -254,6 +261,7 @@ gives, per level:
 | X·D_k, for 3 definitions | 60 (all calls; no helpers) | A: 372 (31 × 3 × 4 input variants); B: 360 (30 × 3 × 4) |
 | X·O_k, for 3 definitions | 60 (all calls; no helpers) | A: 93 (31 × 3); B: 90 (30 × 3) |
 | X·E_k, X·A_k, for 3 definitions *(Amendments, 4)* | 60 + 60 (all calls; no helpers) | A: 372 + 372 (31 × 3 × 4 input variants) |
+| X·N, the size null *(Amendments, 5)* | – | 30 (every class signal but `nom`) |
 | D_k, O_k alone, for 3 definitions | 12 (all calls; no helpers) | A: 15; B: 45 (`_sum`, `_mean`, `_max`) |
 
 The 4 input variants are non-private and public, each without and with constructors.
@@ -373,6 +381,13 @@ holds the commit. A matching SHA means the same code, whoever holds it.
   *refines*, the mechanism is not read. Reported with it: X\*·A_flow against X\*, and
   X\*·D_flow against each of X\*·E_flow and X\*·A_flow. The same reading is made at method
   level for secondary 5, from X\*_m·E_flow on all calls and the method leaf diagnostic.
+- **Against the size null, read beside the primary** *(Amended; see Amendments, 5)*. The
+  paired difference X\*·D_flow minus X\*·N (same estimand, same interval): lower bound above
+  0, *beyond size*, the coupling factor beats a size weighting; upper bound below 0, *the size
+  factor beats the coupling factor*; otherwise *not distinguished from a size weighting*. The
+  primary's reading is unchanged by it; the claim that **coupling** refines complexity takes
+  *beyond size* as its support and the other two readings as a rival explanation left
+  standing. X\*·N against X\* is reported with it.
 - **Effective-sample gate:** set from the explore half before confirm is read. On the MLCQ
   explore half, the standard deviation `s` of the per-repository paired difference (X\*·D_flow
   minus X\*, over repositories with at least one reviewed Blob) gives the number of confirm
@@ -409,6 +424,9 @@ holds the commit. A matching SHA means the same code, whoever holds it.
    and X\*·D_flow against each, class form A non-private, same estimand and interval; the
    same at method level on all calls; every other definition, variant and signal in the
    matrix. They read the mechanism of the primary (above) and change no verdict.
+9. **The size null** *(Amendments, 5)*: X\*·D_flow against X\*·N, and X\*·N against X\*, class
+   form A non-private, same estimand and interval, read as stated under Primary estimand and
+   decision; every X_c·N in the matrix. It changes no verdict.
 
 ## Does the construct hold up: the consistency analysis
 
@@ -609,3 +627,12 @@ was made.
    decision. The change was made on a review of the plan and the harness before any
    measurement of the confirm half. Seen when amended: as for Amendment 3, and nothing more.
    No repository of the MLCQ confirm half or of the seed-3 sample had been measured.
+
+5. **21 October 2026: a size null arm** (The leaf exemption and the score; The matrix; Primary
+   estimand and decision; Pre-registered secondary tests, 9). A class-level gain from X\*·D_k
+   could be the gain of any weighting by the size of the class, because `d_k(C)` sums over the
+   class's methods; secondary 2 only reports the correlation. `X_c·N = X_c × nom` is added for
+   every class signal, and X\*·D_flow is read against X\*·N beside the primary, as stated
+   there. The primary and its reading are unchanged. Made on the same review as Amendment 4.
+   Seen when amended: as for Amendment 4. No repository of the MLCQ confirm half or of the
+   seed-3 sample had been measured.
