@@ -9,6 +9,8 @@ For a coupling definition k, with d_k = out_k - in_k:
                                 once (PLAN.md, Amendments, 4)
     fA_k = max(d_k + 1, 1)      amplification only: nothing is exempt, a junction counts d + 1
                                 times (PLAN.md, Amendments, 4)
+    fN   = nom                  the size null: the class's number of methods, no coupling at all
+                                (class level only; PLAN.md, Amendments, 5)
 
 Method level, for each of paper one's 10 method signals X, each definition k and each calls
 variant v (`all`: every internal call; `nohelp`: calls to another file only):
@@ -32,6 +34,7 @@ units.py), and, for form B, each base method signal X and aggregation g:
     Xc*O_k[A]                                                                 93
     Xc*E_k[A,i]           A, exemption only                                           372
     Xc*A_k[A,i]           A, amplification only                                       372
+    Xc*N                  the size null: Xc x nom (nom itself excluded)               30
     D_k[A,i], O_k[A]                                                          15
     X*D_k[B,i]_g          B: each method's form, aggregated as paper one      360
     X*O_k[B]_g                                                                90
@@ -85,6 +88,7 @@ def class_forms() -> list[tuple]:
     out += [("XO_A", x, k) for x in CLASS_SIGNALS for k in DEFS]
     out += [("XE_A", x, k, i) for x in CLASS_SIGNALS for k in DEFS for i in INPUTS]
     out += [("XA_A", x, k, i) for x in CLASS_SIGNALS for k in DEFS for i in INPUTS]
+    out += [("XN", x) for x in CLASS_SIGNALS if x != "nom"]
     out += [("D_A", k, i) for k in DEFS for i in INPUTS]
     out += [("O_A", k) for k in DEFS]
     out += [("XD_B", x, g, k, i) for x in METHOD_FIELDS for g in AGGS for k in DEFS for i in INPUTS]
@@ -107,6 +111,8 @@ def name(spec: tuple) -> str:
         return f"{t}_{spec[1]}@{spec[2]}"
     if t in ("XD_A", "XE_A", "XA_A"):
         return f"{spec[1]}*{t[1]}_{spec[2]}[A,{spec[3]}]"
+    if t == "XN":
+        return f"{spec[1]}*N"
     if t == "XO_A":
         return f"{spec[1]}*O_{spec[2]}[A]"
     if t == "D_A":
@@ -135,7 +141,7 @@ def name(spec: tuple) -> str:
 def base(spec: tuple) -> str | None:
     """The complexity signal a form is built from (at the form's own level)."""
     t = spec[0]
-    if t in ("X", "XD", "XO", "XE", "XA", "XD_A", "XO_A", "XE_A", "XA_A", "AND", "ANDO"):
+    if t in ("X", "XD", "XO", "XE", "XA", "XD_A", "XO_A", "XE_A", "XA_A", "XN", "AND", "ANDO"):
         return spec[1]
     if t in ("XD_B", "XO_B"):
         return f"{spec[1]}_{spec[2]}"
@@ -249,6 +255,8 @@ def vector(level: str, spec: tuple, S: dict, grouper: Grouper | None = None) -> 
         return c.values[spec[1]] * fE(class_d(c, spec[2], spec[3]))
     if t == "XA_A":
         return c.values[spec[1]] * fA(class_d(c, spec[2], spec[3]))
+    if t == "XN":
+        return c.values[spec[1]] * c.values["nom"]
     if t == "D_A":
         return fD(class_d(c, spec[1], spec[2]))
     if t == "O_A":

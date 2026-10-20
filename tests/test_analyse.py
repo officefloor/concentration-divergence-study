@@ -55,5 +55,7 @@ def test_decomposition_and_mechanism_run_end_to_end():
     assert mp.n == 8
     dm = analyse.decomposition(mp, "cc", "method")
     assert dm["exemption_only"]["y"] == "cc*E_flow@all"
+    sn = analyse.size_null(pop, x)
+    assert sn["size_null"] == f"{x}*N" and sn["D_vs_N"]["x"] == f"{x}*N"
     assert analyse.matrix_by_family(pop)["rows"]
     assert analyse.intersection(pop, x)["cells"]

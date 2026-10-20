@@ -91,6 +91,9 @@ def test_exemption_and_amplification_arms():
     assert forms.vector("class", ("XE_A", "cc_sum", "flow", "np"), J_)[a] == 1
     assert forms.vector("class", ("XA_A", "cc_sum", "flow", "np"), J_)[a] == 5
     assert forms.vector("class", ("XD_A", "cc_sum", "flow", "np"), J_)[a] == 5
+    # the size null (Amendments, 5): X times nom, no coupling
+    c.values["nom"] = np.array([4.0, 1.0])
+    assert forms.vector("class", ("XN", "cc_sum"), J_).tolist() == [4.0, 1.0]
 
 
 def test_class_form_A_inputs():
@@ -126,11 +129,12 @@ def test_form_registry_counts_match_the_plan():
     c = [s[0] for s in forms.CLASS_FORMS]
     assert c.count("X") == 31 and c.count("XD_A") == 372 and c.count("XO_A") == 93
     assert c.count("XE_A") == 372 and c.count("XA_A") == 372                 # Amendments, 4
+    assert c.count("XN") == 30 and "nom*N" not in forms.CLASS_NAMES           # Amendments, 5
     assert c.count("D_A") + c.count("O_A") == 15
     assert c.count("XD_B") == 360 and c.count("XO_B") == 90 and c.count("D_B") + c.count("O_B") == 45
     # the exploratory intersection (PLAN.md, Amendments, 3)
     assert t.count("d") == 6 and t.count("AND") == 60 and t.count("ANDO") == 60 and len(t) == 388
-    assert c.count("d_A") == 12 and c.count("AND") == 372 and c.count("ANDO") == 93 and len(c) == 2227
+    assert c.count("d_A") == 12 and c.count("AND") == 372 and c.count("ANDO") == 93 and len(c) == 2257
     assert "cognitive_max&d_flow[A,np]" in forms.INDEX["class"] and "cc&d_flow@all" in forms.INDEX["method"]
     assert len(set(forms.CLASS_NAMES)) == len(forms.CLASS_NAMES)
     assert len(set(forms.METHOD_NAMES)) == len(forms.METHOD_NAMES)

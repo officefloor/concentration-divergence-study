@@ -83,7 +83,7 @@ WORSENS = "it makes it worse"
 
 
 def compare(pop: Population, x: str, y: str, rule: int = MAD, better: str = REFINES,
-            worse: str = WORSENS) -> dict:
+            worse: str = WORSENS, neither: str = "no difference resolved") -> dict:
     """The paired comparison of form y against form x on a population: the micro (pooled) MCC
     difference with its interval and reading (`better` when its lower bound is above 0, `worse`
     when its upper bound is below), and beside it, not deciding, each arm's pooled precision,
@@ -92,7 +92,7 @@ def compare(pop: Population, x: str, y: str, rule: int = MAD, better: str = REFI
     micro = boot.micro_diff(cx, cy, pop.m)
     return {"x": x, "y": y, "rule": rules.ORDER[rule], "population": pop.label, "n_repos": pop.n,
             "n_repos_with_positive": int(pop.with_positive().sum()),
-            "micro": micro, "reading": boot.reading(micro, better, worse),
+            "micro": micro, "reading": boot.reading(micro, better, worse, neither),
             "arms": {x: {"mcc": pop.pooled_mcc(x, rule), **boot.rates(cx.sum(0))},
                      y: {"mcc": pop.pooled_mcc(y, rule), **boot.rates(cy.sum(0))}},
             "macro": boot.macro_diff(cx, cy, pop.m)}

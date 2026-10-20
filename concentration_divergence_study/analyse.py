@@ -160,6 +160,23 @@ def decomposition(pop: core.Population, x: str, level: str, k: str = "flow",
                                                     worse="amplification only beats the whole factor")}
 
 
+BEYOND_SIZE = "beyond size: the coupling factor beats the size factor"
+SIZE_BETTER = "the size factor beats the coupling factor"
+NOT_DISTINGUISHED = "not distinguished from a size weighting"
+
+
+def size_null(pop: core.Population, x: str) -> dict:
+    """Secondary 9 (PLAN.md, Amendments, 5): the primary arm against the size null X*·N (X*
+    times the class's number of methods, no coupling), and the size null against X*."""
+    N = forms.name(("XN", x))
+    D = core.primary_arm("class", x)
+    return {"size_null": N,
+            "N_vs_X": core.compare(pop, x, N, better="the size factor refines complexity",
+                                   worse="the size factor makes it worse"),
+            "D_vs_N": core.compare(pop, N, D, better=BEYOND_SIZE, worse=SIZE_BETTER,
+                                   neither=NOT_DISTINGUISHED)}
+
+
 def tertiles(pop: core.Population, x: str, k: str = "flow") -> list:
     key = f"{x}|{k}"
     out = []
@@ -539,6 +556,7 @@ def analyse(check: bool = False) -> dict:
         c["pooled_auc"] = pooled_auc(pop, xc, f"{xc}|D_flow")
         c["pooled_auc"]["reading"] = boot.reading((c["pooled_auc"] or {}).get("diff"))
         c["decomposition"] = decomposition(pop, xc, "class")
+        c["size_null"] = size_null(pop, xc)
         out["primary"][sname] = c
     out["primary"]["javaparser"]["robustness"] = (
         "agrees" if out["primary"]["javaparser"]["reading"] == out["primary"]["joined"]["reading"] else "differs")
@@ -691,6 +709,9 @@ def print_report(a: dict) -> None:
         print(f"     exemption only {_fmt(dc['exemption_only']['micro'])} -> {dc['exemption_only']['reading']}; "
               f"amplification only {_fmt(dc['amplification_only']['micro'])} -> {dc['amplification_only']['reading']}")
         print(f"     mechanism: {p['mechanism']['reading']}" + (f"  [{p['mechanism'].get('robustness')}]" if sname != "joined" else ""))
+        sn = p["size_null"]
+        print(f"     size null {sn['size_null']}: vs X* {_fmt(sn['N_vs_X']['micro'])}; X*D minus it "
+              f"{_fmt(sn['D_vs_N']['micro'])} -> {sn['D_vs_N']['reading']}")
     for sname in SETS:
         print(f"\n-- leaf diagnostic [{sname}]")
         for key, v in a["leaf"][sname].items():
