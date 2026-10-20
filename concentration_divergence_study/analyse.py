@@ -309,7 +309,9 @@ def predictions(by: dict, k: str) -> dict:
           "cells": [{"oracle": c["oracle"], "family": c["family"], "dD": c["dD"]} for c in tools]}
     nonsize = [cell(blob, fam) for fam in ("peak", "density")]
     any_lo = any(c and (lo_pos(c["dD"]) or lo_pos(c["dO"])) for c in nonsize)
-    if P1 and P3 != "outgoing-only":
+    if any(v is None for v in p1d.values()):
+        verdict = "not estimable"            # no interval for human Blob in peak or density
+    elif P1 and P3 != "outgoing-only":
         verdict = "supported"
     elif P1_O and P3 == "outgoing-only":
         verdict = "outgoing data only"
