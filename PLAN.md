@@ -193,6 +193,19 @@ X·O_k(m)  = X(m) × fO_k(m)
 
 and the coupling factors on their own: `D_k = fD_k` and `O_k = fO_k`.
 
+**The two halves of the divergence factor, apart** *(Amended; see Amendments, 4)*. `fD_k` does two
+things: it exempts a catchment, and it multiplies a junction by `d + 1`, without bound. Each is
+measured on its own, for every field, definition and variant:
+
+```
+fE_k(m) = [d_k(m) ≥ 0]         exemption only: a catchment is 0, everything else is 1
+fA_k(m) = max(d_k(m) + 1, 1)   amplification only: nothing is exempt, a junction is d + 1
+X·E_k = X × fE_k               X·A_k = X × fA_k           (fD_k = fE_k × fA_k)
+```
+
+At class level (form A) the same, on the class's `d_k(C)`. They are pre-registered secondaries
+(secondary 8) and they read the mechanism of the primary (Primary estimand and decision).
+
 **Class forms.** Two ways to weight a class, each with both input variants:
 
 - **A. The class as one unit (primary).** The class has its own coupling, and it weights each
@@ -240,6 +253,7 @@ gives, per level:
 | complexity alone, X | 10 | 31 |
 | X·D_k, for 3 definitions | 60 (all calls; no helpers) | A: 372 (31 × 3 × 4 input variants); B: 360 (30 × 3 × 4) |
 | X·O_k, for 3 definitions | 60 (all calls; no helpers) | A: 93 (31 × 3); B: 90 (30 × 3) |
+| X·E_k, X·A_k, for 3 definitions *(Amendments, 4)* | 60 + 60 (all calls; no helpers) | A: 372 + 372 (31 × 3 × 4 input variants) |
 | D_k, O_k alone, for 3 definitions | 12 (all calls; no helpers) | A: 15; B: 45 (`_sum`, `_mean`, `_max`) |
 
 The 4 input variants are non-private and public, each without and with constructors.
@@ -345,6 +359,20 @@ holds the commit. A matching SHA means the same code, whoever holds it.
 - **Reported beside it, not deciding:** precision, recall and false-positive rate of each arm
   (the hypothesis predicts higher precision at a small cost in recall); macro MCC; the
   threshold-free pooled AUC of X\*·D_flow against X\* (modified z versus modified z).
+- **The mechanism of a refinement, read beside the primary** *(Amended; see Amendments, 4)*.
+  The question names the exemption ("by setting complex leaves aside"), but the factor also
+  amplifies junctions, and at class level that amplification grows with the class. So when the
+  primary reads *refines*, its mechanism is read, pre-registered, from two things in the
+  primary's own variant (flow, non-private, constructors not counted): the exemption-only arm
+  X\*·E_flow against X\* (same estimand, same interval), and the leaf diagnostic (secondary 1)
+  under flow, non-private. If X\*·E_flow also reads *refines* and the leaf diagnostic is not
+  *contradicted*, the refinement is **by the exemption**: the claim in the question is
+  supported. Otherwise it is **by amplification**: the gain comes from multiplying junctions,
+  a fan-out effect, and the claim that setting complex leaves aside refines complexity is
+  **not supported**, although the primary is positive. When the primary does not read
+  *refines*, the mechanism is not read. Reported with it: X\*·A_flow against X\*, and
+  X\*·D_flow against each of X\*·E_flow and X\*·A_flow. The same reading is made at method
+  level for secondary 5, from X\*_m·E_flow on all calls and the method leaf diagnostic.
 - **Effective-sample gate:** set from the explore half before confirm is read. On the MLCQ
   explore half, the standard deviation `s` of the per-repository paired difference (X\*·D_flow
   minus X\*, over repositories with at least one reviewed Blob) gives the number of confirm
@@ -377,6 +405,10 @@ holds the commit. A matching SHA means the same code, whoever holds it.
    with the paired difference between the two.
 6. **Tool oracles** on the seed-3 sample (above).
 7. **Fontana's God Class** (above): the primary's paired difference, and the leaf diagnostic.
+8. **The two halves of the factor** *(Amendments, 4)*: X\*·E_flow and X\*·A_flow against X\*,
+   and X\*·D_flow against each, class form A non-private, same estimand and interval; the
+   same at method level on all calls; every other definition, variant and signal in the
+   matrix. They read the mechanism of the primary (above) and change no verdict.
 
 ## Does the construct hold up: the consistency analysis
 
@@ -562,3 +594,18 @@ was made.
    MLCQ explore repositories printed the region counts for human Blob and Long Method (5
    positives each). No repository of the MLCQ confirm half or of the seed-3 sample had been
    measured.
+
+4. **21 October 2026: the exemption and the amplification of the divergence factor are tested
+   apart, and the mechanism of a refinement is read** (The leaf exemption and the score; The
+   matrix; Primary estimand and decision; Pre-registered secondary tests, 8). The factor
+   `fD = max(d + 1, 0)` does two things: it exempts a catchment, and it multiplies a junction
+   by `d + 1`, without bound. At class level `d` is a sum over the class's methods, so the
+   amplification grows with the class, and a refinement could come from it alone while the
+   exemption, which the question names, adds nothing or costs recall. Two forms are added for
+   every signal, definition and variant, as pre-registered secondaries: exemption only,
+   `X·E_k = X × [d_k ≥ 0]`, and amplification only, `X·A_k = X × max(d_k + 1, 1)`. The primary
+   and its reading are unchanged; a pre-registered reading of its mechanism is added beside it,
+   from the exemption-only arm and the leaf diagnostic, stated under Primary estimand and
+   decision. The change was made on a review of the plan and the harness before any
+   measurement of the confirm half. Seen when amended: as for Amendment 3, and nothing more.
+   No repository of the MLCQ confirm half or of the seed-3 sample had been measured.
