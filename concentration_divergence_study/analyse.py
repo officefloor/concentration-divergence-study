@@ -177,6 +177,16 @@ def size_null(pop: core.Population, x: str) -> dict:
                                    neither=NOT_DISTINGUISHED)}
 
 
+def fit_nonexempt(pop: core.Population, x: str, level: str) -> dict:
+    """Sensitivity (PLAN.md, Amendments, 7): the primary arm with the rule fitted on the
+    non-exempt units only, against X*, and against the primary arm fitted on every unit."""
+    D = core.primary_arm(level, x)
+    ne = forms.name(("XDne_A", x, "flow", "np") if level == "class" else ("XDne", x, "flow", "all"))
+    return {"arm": ne, "vs_X": core.compare(pop, x, ne),
+            "vs_fitted_on_all": core.compare(pop, D, ne, better="fitting on the non-exempt units is better",
+                                             worse="fitting on every unit is better")}
+
+
 def tertiles(pop: core.Population, x: str, k: str = "flow") -> list:
     key = f"{x}|{k}"
     out = []
@@ -470,7 +480,7 @@ def diagnostics(scores: list[dict], label: str, xc: str | None, xm: str | None) 
            "di": {"repositories_declaring": sum(1 for m in usable if m.get("di")), "by_framework": dict(di)},
            "owners_top": owners.most_common(10),
            "owner_top_share": (owners.most_common(1)[0][1] / len(usable)) if usable else None,
-           "labels": dict(labels), "scale_kinds": {}, "roles": {}}
+           "labels": dict(labels), "scale_kinds": {}, "roles": {}, "uncoupled": {}, "throw_new": {}}
     for sname in SETS:
         for level, x in (("class", xc), ("method", xm)):
             if x is None:
@@ -496,6 +506,28 @@ def diagnostics(scores: list[dict], label: str, xc: str | None, xm: str | None) 
                     roles[f"{key}|units"] += nu
                     roles[f"{key}|cc"] += area
             out["roles"][f"{sname}|{level}"] = dict(roles)
+            # PLAN.md, Amendments, 7: the reviewed and positive units that carry no coupling, per
+            # human definition, and the share of outgoing coupling that is `throw new`
+            unc = {}
+            thr = Counter()
+            for s in scores:
+                lv = (s.get("sets") or {}).get(sname, {}).get(level)
+                if not lv:
+                    continue
+                for o, e in (lv.get("extracts") or {}).items():
+                    c, lab = np.array(e["coupled"], bool), np.array(e["label"], bool)
+                    u = unc.setdefault(o, Counter())
+                    u["reviewed"] += int(len(c))
+                    u["reviewed_uncoupled"] += int((~c).sum())
+                    u["positive"] += int(lab.sum())
+                    u["positive_uncoupled"] += int((lab & ~c).sum())
+                for k, (t, a) in (lv.get("throw_new") or {}).items():
+                    thr[f"{k}|throw_new"] += t
+                    thr[f"{k}|out"] += a
+            out["uncoupled"][f"{sname}|{level}"] = {o: dict(v) for o, v in unc.items()}
+            out["throw_new"][f"{sname}|{level}"] = {
+                k: {"share": (thr[f"{k}|throw_new"] / thr[f"{k}|out"]) if thr[f"{k}|out"] else None,
+                    "throw_new": thr[f"{k}|throw_new"], "out": thr[f"{k}|out"]} for k in units.DEFS}
     return out
 
 
@@ -539,6 +571,8 @@ def analyse(check: bool = False) -> dict:
     for sname in SETS:
         pops[sname] = {
             "blob": core.Population(mlcq, sname, "class", "human_blob", f"MLCQ {half}, human Blob [{sname}]"),
+            "blob_coupled": core.Population(mlcq, sname, "class", "human_blob|coupled",
+                                            f"MLCQ {half}, human Blob, coupled classes only [{sname}]"),
             "long": core.Population(mlcq, sname, "method", "human_method_long_method",
                                     f"MLCQ {half}, human Long Method [{sname}]"),
             "fontana": core.Population(fontana, sname, "class", "human_fontana_god_class", f"Fontana God Class [{sname}]"),
@@ -594,6 +628,8 @@ def analyse(check: bool = False) -> dict:
     for sname in SETS:
         plist, index = [], {}
         for name, pop in pops[sname].items():
+            if name.endswith("_coupled"):
+                continue
             src = "mlcq" if name in ("blob", "long") else ("fontana" if name == "fontana" else "seed3")
             index[pop.label] = (src, [key_pos[src][m["key"]] for m in pop.meta])
             plist.append(pop)
@@ -631,7 +667,8 @@ def analyse(check: bool = False) -> dict:
                        "no_helpers_vs_all": core.compare(P["long"], ym, core.primary_arm("method", xm, variant="nohelp"),
                                                          better="no helpers is better", worse="all calls is better"),
                        "leaf": {k: leaf(P["long"], xm, k, "all") for k in units.DEFS},
-                       "decomposition": decomposition(P["long"], xm, "method")}
+                       "decomposition": decomposition(P["long"], xm, "method"),
+                       "fit_nonexempt": fit_nonexempt(P["long"], xm, "method")}
         s["method"]["mechanism"] = mechanism(s["method"]["all_calls"], s["method"]["decomposition"]["exemption_only"],
                                              s["method"]["leaf"]["flow"])
         s["tool_oracles"] = {o: core.compare(P[o], xc, core.primary_arm("class", xc)) for o in CLASS_ORACLES_SEED3}
@@ -658,6 +695,8 @@ def analyse(check: bool = False) -> dict:
         no_budget.label = pop.label + ", without repositories whose call resolution ran out of time"
         sens[sname] = {"without_di": core.compare(no_di, xc, core.primary_arm("class", xc)),
                        "without_budget_exhausted": core.compare(no_budget, xc, core.primary_arm("class", xc)),
+                       "fit_nonexempt": fit_nonexempt(pop, xc, "class"),
+                       "without_uncoupled": core.compare(pops[sname]["blob_coupled"], xc, core.primary_arm("class", xc)),
                        "budget_exhausted_repos": [m["key"] for m in pop.meta
                                                   if (m.get("javaparser") or {}).get("budget_exhausted")]}
     out["sensitivity"] = sens
@@ -736,7 +775,15 @@ def print_report(a: dict) -> None:
     sj = a["sensitivity"]["joined"]
     print(f"-- sensitivity [joined]: without DI {_fmt(sj['without_di']['micro'])}; without the "
           f"{len(sj['budget_exhausted_repos'])} repositories out of resolution time "
-          f"{_fmt(sj['without_budget_exhausted']['micro'])}")
+          f"{_fmt(sj['without_budget_exhausted']['micro'])}; fitted on the non-exempt classes "
+          f"{_fmt(sj['fit_nonexempt']['vs_X']['micro'])} (against fitted on all "
+          f"{_fmt(sj['fit_nonexempt']['vs_fitted_on_all']['micro'])}); coupled classes only "
+          f"{_fmt(sj['without_uncoupled']['micro'])}")
+    dg = a["diagnostics"]["mlcq"]
+    print(f"-- uncoupled units [joined]: {dg['uncoupled'].get('joined|class')}; {dg['uncoupled'].get('joined|method')}")
+    print(f"-- throw-new share of outgoing coupling [joined, flow]: class "
+          f"{(dg['throw_new'].get('joined|class') or {}).get('flow')}; method "
+          f"{(dg['throw_new'].get('joined|method') or {}).get('flow')}")
     print("\n-- EXPLORATORY intersection [joined], mad_z, flow (decides nothing): positives / flagged per region")
     for name, it in a["exploratory_intersection"]["joined"].items():
         c = it["cells"].get("flow|np") or it["cells"].get("flow|all")

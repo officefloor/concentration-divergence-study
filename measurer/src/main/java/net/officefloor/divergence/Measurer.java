@@ -89,8 +89,10 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
  * enclosing method. The body of a nested type (an anonymous class body, a local class) belongs
  * to that type's own methods, never to the enclosing method.</li>
  * <li><b>Calls:</b> method calls, constructor calls ({@code new T(...)}, an anonymous class
- * creation included) and explicit {@code this(...)}/{@code super(...)}; method references are
- * not calls. Each call records its argument count and how it resolved: to a declaration in an
+ * creation included; one that is the expression of a {@code throw} is recorded as its own kind,
+ * so the harness can report that share) and explicit {@code this(...)}/{@code super(...)};
+ * method references are not calls. Each call records its argument count and how it resolved:
+ * to a declaration in an
  * analysed file (internal, with that file), to the JDK, to a repository file that is not
  * analysed, not at all, or not at all although its receiver type is declared in the
  * repository ("should have resolved"). The solver sees the source roots of the analysed files
@@ -105,8 +107,8 @@ import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeS
  */
 public final class Measurer {
 
-	/** Call kinds. */
-	static final int CALL_METHOD = 0, CALL_NEW = 1, CALL_EXPLICIT_CTOR = 2;
+	/** Call kinds. A {@code new} that is the expression of a {@code throw} is CALL_THROW_NEW. */
+	static final int CALL_METHOD = 0, CALL_NEW = 1, CALL_EXPLICIT_CTOR = 2, CALL_THROW_NEW = 3;
 
 	/** Call resolutions. */
 	static final int RES_INTERNAL = 0, RES_JDK = 1, RES_REPO_NOT_ANALYSED = 2, RES_UNRESOLVED = 3,
@@ -429,7 +431,8 @@ public final class Measurer {
 			if (n instanceof MethodCallExpr mce) {
 				m.calls.add(call(mce, mce.getArguments().size(), CALL_METHOD));
 			} else if (n instanceof ObjectCreationExpr oce) {
-				m.calls.add(call(oce, oce.getArguments().size(), CALL_NEW));
+				boolean thrown = oce.getParentNode().map(p -> p instanceof ThrowStmt).orElse(false);
+				m.calls.add(call(oce, oce.getArguments().size(), thrown ? CALL_THROW_NEW : CALL_NEW));
 			} else if (n instanceof ExplicitConstructorInvocationStmt ecis) {
 				m.calls.add(call(ecis, ecis.getArguments().size(), CALL_EXPLICIT_CTOR));
 			}

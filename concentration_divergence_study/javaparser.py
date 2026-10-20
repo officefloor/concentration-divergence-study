@@ -18,8 +18,9 @@ import tempfile
 
 from . import pins
 
-# Call kinds and resolutions, as Measurer.java writes them.
-CALL_METHOD, CALL_NEW, CALL_EXPLICIT_CTOR = 0, 1, 2
+# Call kinds and resolutions, as Measurer.java writes them. CALL_THROW_NEW is a `new` that is the
+# expression of a `throw` (counted as a constructor call; kept apart for the diagnostics).
+CALL_METHOD, CALL_NEW, CALL_EXPLICIT_CTOR, CALL_THROW_NEW = 0, 1, 2, 3
 RES_INTERNAL, RES_JDK, RES_REPO_NOT_ANALYSED, RES_UNRESOLVED, RES_SHOULD_HAVE, RES_BUDGET = range(6)
 RESOLUTIONS = ("internal", "jdk", "repo_not_analysed", "unresolved", "should_have_resolved",
                "budget")
@@ -86,7 +87,7 @@ public class U extends T {
         if (v > 1 && y > 0) { for (int i = 0; i < y; i++) { if (i % 2 == 0) { v++; } else if (i > 5) { v--; } else { v += 2; } } }
         return run2(v, v, v);
     }
-    int run2(int a, int b, int... c) { return a; }
+    int run2(int a, int b, int... c) { if (a < 0) { throw new IllegalStateException("x"); } return a; }
     public U() { super(1); }
 }
 """,
@@ -101,7 +102,7 @@ _EXPECTED = {
     ("src/main/java/b/U.java", "run", 6): (2, "public", 6, 9, 3,
                                            [[1, 0, 0, 1], [0, 0, 1, -1], [2, 0, 3, -1],
                                             [1, 1, 0, 0], [3, 0, 0, 1]]),
-    ("src/main/java/b/U.java", "run2", 14): (3, "package", 1, 0, 0, []),
+    ("src/main/java/b/U.java", "run2", 14): (3, "package", 2, 1, 1, [[1, 3, 1, -1]]),
     ("src/main/java/b/U.java", "U", 15): (0, "public", 1, 0, 0, [[1, 2, 0, 0]]),
 }
 

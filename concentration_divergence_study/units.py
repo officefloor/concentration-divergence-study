@@ -27,7 +27,11 @@ also computed with them counted (`np+ctor`, `pub+ctor`) to show the difference. 
 is still a method-level unit with its own coupling, and calls to constructors still count in
 `out`. A unit of paper one's that the join cannot match carries no coupling
 (in = out = 0, so d = 0 and both factors are 1: its complexity is unweighted), and so does a file
-the measurer could not parse; both are counted in the diagnostics.
+the measurer could not parse; both are counted in the diagnostics, and every human definition
+is also given on its reviewed units that carry coupling only (`<name>|coupled`, the universe
+less the uncoupled units), for the plan's sensitivity (PLAN.md, Amendments, 7). The outgoing
+coupling of a `throw new T(...)` of a repository type is counted like any call (SINEW.md notes
+the artefact) and also kept apart, as `throw_*`, so its share can be reported.
 """
 from __future__ import annotations
 
@@ -81,6 +85,7 @@ class Level:
         self.n = len(self.ids)
         self.values: dict = {}
         self.oracles: dict = {}          # name -> (positives mask, universe mask)
+        self.universe_given: dict = {}   # name -> whether the definition came with a universe
         self.coupled = np.zeros(self.n, bool)
         # method level: p, in_k, out_all_k, out_leave_k, callable masks, file index
         # class level: in_{input}_k, out_k
@@ -88,6 +93,7 @@ class Level:
 
     def add_oracle(self, name, pos_mask, univ_mask=None):
         self.oracles[name] = (pos_mask, univ_mask if univ_mask is not None else np.ones(self.n, bool))
+        self.universe_given[name] = univ_mask is not None
 
 
 def _callable(m: dict) -> dict:
@@ -101,16 +107,21 @@ def _callable(m: dict) -> dict:
 def _method_coupling(m: dict, file_idx: int) -> dict:
     out = {"p": m["params"], **{f"callable_{i}": v for i, v in _callable(m).items()}}
     for k in DEFS:
-        all_, leave = 0, 0
-        for a, _kind, res, tidx in m["calls"]:
+        all_, leave, t_all, t_leave = 0, 0, 0, 0
+        for a, kind, res, tidx in m["calls"]:
             if res != javaparser.RES_INTERNAL:
                 continue
             v = call_out(a, k)
             all_ += v
+            thrown = kind == javaparser.CALL_THROW_NEW
+            t_all += v if thrown else 0
             if tidx != file_idx:
                 leave += v
+                t_leave += v if thrown else 0
         out[f"out_all_{k}"] = all_
         out[f"out_leave_{k}"] = leave
+        out[f"throw_all_{k}"] = t_all
+        out[f"throw_leave_{k}"] = t_leave
     return out
 
 
@@ -128,13 +139,14 @@ def _method_arrays(level: Level, coup: list) -> None:
         level.c[f"in_{k}"] = inn
         for v in ("all", "leave"):
             level.c[f"out_{v}_{k}"] = np.array([c[f"out_{v}_{k}"] if c else 0 for c in coup], float)
+            level.c[f"throw_{v}_{k}"] = np.array([c[f"throw_{v}_{k}"] if c else 0 for c in coup], float)
     assert all(len(a) == n for a in level.c.values())
 
 
 def _class_coupling(level: Level, methods_by_file: dict) -> None:
     """Form A coupling of each file from all the measurer's methods in it."""
     for k in DEFS:
-        for key in [f"in_{i}" for i in INPUTS] + ["out"]:
+        for key in [f"in_{i}" for i in INPUTS] + ["out", "throw"]:
             level.c[f"{key}_{k}"] = np.zeros(level.n)
     coupled = np.zeros(level.n, bool)
     for i, f in enumerate(level.ids):
@@ -150,7 +162,17 @@ def _class_coupling(level: Level, methods_by_file: dict) -> None:
                     if mc[f"callable_{inp}"]:
                         level.c[f"in_{inp}_{k}"][i] += ink
                 level.c[f"out_{k}"][i] += mc[f"out_leave_{k}"]
+                level.c[f"throw_{k}"][i] += mc[f"throw_leave_{k}"]
     level.coupled = coupled
+
+
+def _coupled_variants(level: Level) -> None:
+    """For every definition scored on a universe (a human one), the same definition on the
+    universe's coupled units only: `<name>|coupled` (PLAN.md, Amendments, 7)."""
+    for name, (pos, univ) in list(level.oracles.items()):
+        if not level.universe_given.get(name) or name.endswith("|coupled"):
+            continue
+        level.add_oracle(f"{name}|coupled", pos & level.coupled, univ & level.coupled)
 
 
 def _measurer_files(doc: dict) -> dict:
@@ -210,6 +232,8 @@ def joined(rec: dict) -> dict:
     _class_coupling(cl, jp_files)
     cpos = {u: j for j, u in enumerate(ckeep)}
     _oracles_from_idx(cl, cu["god_idx"], cpos, CLASS_ORACLES)
+    _coupled_variants(ml)
+    _coupled_variants(cl)
     n_jp = sum(len(ms) for ms in jp_files.values())
     join = {"lizard_units": ml.n, "joined": int(ml.coupled.sum()), "ambiguous": ambiguous,
             "measurer_units": n_jp, "measurer_not_joined": n_jp - len(used),
@@ -306,6 +330,8 @@ def javaparser_set(rec: dict) -> dict:
         p = np.array([f in named[name] for f in files])
         u = np.array([f in named[univ] for f in files]) if univ else None
         cl.add_oracle(name, p, u)
+    _coupled_variants(ml)
+    _coupled_variants(cl)
     return {"method": ml, "class": cl}
 
 

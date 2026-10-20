@@ -21,6 +21,11 @@ Per repository, result set and level:
                tertiles of X (secondary 2)
   spearman     within-repository rank correlation of every complexity signal with d_k and out_k
   roles        units (and complexity, by cc) in each role: catchment, pipe, junction
+  throw_new    per definition, the outgoing coupling that comes from `throw new T(...)` of a
+               repository type, against all outgoing coupling (PLAN.md, Amendments, 7)
+A form fitted on a subset of the units (forms.fit_on; the |ne forms) has its rules fitted on
+that subset and the other units never flagged. A human definition is scored twice: on its
+reviewed units, and on its reviewed units that carry coupling (`<name>|coupled`, units.py).
 Nothing is read or printed about any result here.
 """
 from __future__ import annotations
@@ -101,8 +106,17 @@ def score_level(level: str, S: dict) -> dict:
             scale[fi], zero[fi] = -1, np.nan
         else:
             v = forms.vector(level, spec, S, grouper).astype(float)
-            masks = rules.all_rules(v)
-            kind, _ = rules.mad_z_scale(v)
+            sel = forms.fit_on(level, spec, S)
+            if sel is None:
+                masks = rules.all_rules(v)
+                kind, _ = rules.mad_z_scale(v)
+            else:                                  # fitted on the subset; the rest never flagged
+                masks = []
+                for sub in rules.all_rules(v[sel]):
+                    full = np.zeros(L.n, bool)
+                    full[sel] = sub
+                    masks.append(full)
+                kind, _ = rules.mad_z_scale(v[sel])
             scale[fi] = SCALE_CODE[kind]
             zero[fi] = float((v == 0).mean())
             if spec[0] in ("d", "d_A", "O", "O_A"):
@@ -120,6 +134,7 @@ def score_level(level: str, S: dict) -> dict:
     out["extracts"] = _extracts(level, S, oracles, vectors_kept, x_masks)
     out["spearman"] = _spearman(level, S)
     out["roles"] = _roles(level, S)
+    out["throw_new"] = _throw_new(level, S)
     return out
 
 
@@ -136,7 +151,7 @@ def _extracts(level: str, S: dict, oracles: list, vectors: dict, x_masks: dict) 
     inputs = forms.INPUTS if level == "class" else ("all",)
     for o in oracles:
         pos, univ = L.oracles[o]
-        if univ.all():
+        if not L.universe_given.get(o) or o.endswith("|coupled"):
             continue                                   # a tool definition: no reviewed universe
         rev = np.flatnonzero(univ)
         rec = {"label": pos[rev].astype(int).tolist(), "coupled": L.coupled[rev].astype(int).tolist(),
@@ -190,6 +205,21 @@ def _roles(level: str, S: dict) -> dict:
         d = _primary_d(level, S, k)
         for role, m in (("catchment", d < 0), ("pipe", d == 0), ("junction", d > 0)):
             out[f"{k}|{role}"] = [int((sel & m).sum()), float(cc[sel & m].sum())]
+    return out
+
+
+def _throw_new(level: str, S: dict) -> dict:
+    """{definition: [outgoing coupling from `throw new`, all outgoing coupling]} over the coupled
+    units: all calls at method level, calls leaving the class at class level."""
+    L = S[level]
+    sel = L.coupled
+    out = {}
+    for k in units.DEFS:
+        if level == "method":
+            t, a = L.c[f"throw_all_{k}"], L.c[f"out_all_{k}"]
+        else:
+            t, a = L.c[f"throw_{k}"], L.c[f"out_{k}"]
+        out[k] = [float(t[sel].sum()), float(a[sel].sum())]
     return out
 
 

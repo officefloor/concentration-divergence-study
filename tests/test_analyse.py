@@ -21,7 +21,7 @@ def fake_scores(n: int = 8, half: str = "explore") -> list[dict]:
         cv["nom"] = [4.0, 1.0]
         rec["units"]["class"]["god_idx"]["human_blob"] = [0] if i % 2 == 0 else []
         rec["units"]["method"]["god_idx"]["human_method_long_method"] = [0] if i % 2 else []
-        rec["units"]["method"]["god_idx"]["human_method_long_method_reviewed"] = [0, 4]
+        rec["units"]["method"]["god_idx"]["human_method_long_method_reviewed"] = [0, 4, 5]
         sc = score.score_record(rec)
         sc["meta"] = {"key": f"r{i}", "usable": True, "error": None, "half": half, "di": [],
                       "javaparser": {"budget_exhausted": False}, "full_name": f"o{i % 2}/r{i}"}
@@ -59,6 +59,14 @@ def test_decomposition_and_mechanism_run_end_to_end():
     assert mp.n == 8
     dm = analyse.decomposition(mp, "cc", "method")
     assert dm["exemption_only"]["y"] == "cc*E_flow@all"
+    fn = analyse.fit_nonexempt(pop, x, "class")
+    assert fn["arm"] == f"{x}*D_flow[A,np]|ne"
+    cp = core.Population(scores, "joined", "method", "human_method_long_method|coupled", "coupled")
+    assert cp.n == 8 and cp.C[0, 0, core.MAD, 0] == 2                   # ghost@40 left out of 3
+    dg = analyse.diagnostics(scores, "fake", x, "cc")
+    u = dg["uncoupled"]["joined|method"]["human_method_long_method"]
+    assert u["reviewed"] == 24 and u["reviewed_uncoupled"] == 8 and u["positive_uncoupled"] == 0
+    assert dg["throw_new"]["joined|class"]["flow"]["share"] == 2 / 9
     sn = analyse.size_null(pop, x)
     assert sn["size_null"] == f"{x}*N" and sn["D_vs_N"]["x"] == f"{x}*N"
     assert analyse.matrix_by_family(pop)["rows"]

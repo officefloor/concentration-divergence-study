@@ -20,6 +20,9 @@ variant v (`all`: every internal call; `nohelp`: calls to another file only):
     X*O_k@v      X x fO_k                                           60
     X*E_k@v      X x fE_k, exemption only                           60
     X*A_k@v      X x fA_k, amplification only                       60
+    X*D_k@all|ne X x fD_k, the rule fitted on the non-exempt units  30
+                 only, exempt units never flagged (the primary
+                 calls variant; PLAN.md, Amendments, 7)
     D_k@v, O_k@v the factors alone                                  12
     d_k@v        the divergence d_k itself, by the rule             6
     X&d_k@v      AND: flagged by the rule on X and on d_k@v         60
@@ -35,6 +38,8 @@ units.py), and, for form B, each base method signal X and aggregation g:
     Xc*E_k[A,i]           A, exemption only                                           372
     Xc*A_k[A,i]           A, amplification only                                       372
     Xc*N                  the size null: Xc x nom (nom itself excluded)               30
+    Xc*D_k[A,np]|ne       A, the rule fitted on the non-exempt classes only (the      93
+                          primary input variant; PLAN.md, Amendments, 7)
     D_k[A,i], O_k[A]                                                          15
     X*D_k[B,i]_g          B: each method's form, aggregated as paper one      360
     X*O_k[B]_g                                                                90
@@ -74,6 +79,7 @@ def method_forms() -> list[tuple]:
     out += [("XO", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
     out += [("XE", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
     out += [("XA", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
+    out += [("XDne", x, k, "all") for x in METHOD_FIELDS for k in DEFS]
     out += [("D", k, v) for k in DEFS for v in VARIANTS]
     out += [("O", k, v) for k in DEFS for v in VARIANTS]
     out += [("d", k, v) for k in DEFS for v in VARIANTS]
@@ -89,6 +95,7 @@ def class_forms() -> list[tuple]:
     out += [("XE_A", x, k, i) for x in CLASS_SIGNALS for k in DEFS for i in INPUTS]
     out += [("XA_A", x, k, i) for x in CLASS_SIGNALS for k in DEFS for i in INPUTS]
     out += [("XN", x) for x in CLASS_SIGNALS if x != "nom"]
+    out += [("XDne_A", x, k, "np") for x in CLASS_SIGNALS for k in DEFS]
     out += [("D_A", k, i) for k in DEFS for i in INPUTS]
     out += [("O_A", k) for k in DEFS]
     out += [("XD_B", x, g, k, i) for x in METHOD_FIELDS for g in AGGS for k in DEFS for i in INPUTS]
@@ -107,12 +114,16 @@ def name(spec: tuple) -> str:
         return spec[1]
     if t in ("XD", "XO", "XE", "XA"):
         return f"{spec[1]}*{t[1]}_{spec[2]}@{spec[3]}"
+    if t == "XDne":
+        return f"{spec[1]}*D_{spec[2]}@{spec[3]}|ne"
     if t in ("D", "O"):
         return f"{t}_{spec[1]}@{spec[2]}"
     if t in ("XD_A", "XE_A", "XA_A"):
         return f"{spec[1]}*{t[1]}_{spec[2]}[A,{spec[3]}]"
     if t == "XN":
         return f"{spec[1]}*N"
+    if t == "XDne_A":
+        return f"{spec[1]}*D_{spec[2]}[A,{spec[3]}]|ne"
     if t == "XO_A":
         return f"{spec[1]}*O_{spec[2]}[A]"
     if t == "D_A":
@@ -141,7 +152,8 @@ def name(spec: tuple) -> str:
 def base(spec: tuple) -> str | None:
     """The complexity signal a form is built from (at the form's own level)."""
     t = spec[0]
-    if t in ("X", "XD", "XO", "XE", "XA", "XD_A", "XO_A", "XE_A", "XA_A", "XN", "AND", "ANDO"):
+    if t in ("X", "XD", "XO", "XE", "XA", "XDne", "XD_A", "XO_A", "XE_A", "XA_A", "XN", "XDne_A",
+             "AND", "ANDO"):
         return spec[1]
     if t in ("XD_B", "XO_B"):
         return f"{spec[1]}_{spec[2]}"
@@ -191,6 +203,18 @@ def fA(d: np.ndarray) -> np.ndarray:
     return np.maximum(d + 1, 1)
 
 
+def fit_on(level: str, spec: tuple, S: dict) -> np.ndarray | None:
+    """For a form whose rule is fitted on a subset of the units (the |ne forms: the non-exempt
+    units, fD > 0; PLAN.md, Amendments, 7), the mask of that subset; the units outside it are
+    never flagged. None for a form fitted on every unit."""
+    t = spec[0]
+    if t == "XDne":
+        return fD(method_d(S["method"], spec[2], spec[3])) > 0
+    if t == "XDne_A":
+        return fD(class_d(S["class"], spec[2], spec[3])) > 0
+    return None
+
+
 def _method_B(m, k: str, i: str | None) -> tuple[np.ndarray, np.ndarray]:
     """Form B's per-method factors: in counted only if callable from outside, out leaving only."""
     out = m.c[f"out_leave_{k}"]
@@ -229,7 +253,7 @@ def vector(level: str, spec: tuple, S: dict, grouper: Grouper | None = None) -> 
         m = S["method"]
         if t == "X":
             return m.values[spec[1]]
-        if t == "XD":
+        if t in ("XD", "XDne"):
             return m.values[spec[1]] * fD(method_d(m, spec[2], spec[3]))
         if t == "XO":
             return m.values[spec[1]] * fO(method_out(m, spec[2], spec[3]))
@@ -247,7 +271,7 @@ def vector(level: str, spec: tuple, S: dict, grouper: Grouper | None = None) -> 
     c = S["class"]
     if t == "X":
         return c.values[spec[1]]
-    if t == "XD_A":
+    if t in ("XD_A", "XDne_A"):
         return c.values[spec[1]] * fD(class_d(c, spec[2], spec[3]))
     if t == "XO_A":
         return c.values[spec[1]] * fO(c.c[f"out_{spec[2]}"])

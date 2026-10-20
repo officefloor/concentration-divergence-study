@@ -28,7 +28,9 @@ def record():
             # a public constructor, p=3, calling B's constructor with 1 argument
             _m("A", 15, 3, "public", [[1, 1, I, 1]], kind="ctor")]},
         {"path": b, "package": "a", "level": "JAVA_21", "problem": None, "types": 1, "methods": [
-            _m("leaf", 2, 4, "package", [[0, 0, U, -1]], cc=9)]}]}
+            _m("leaf", 2, 4, "package", [[0, 0, U, -1]], cc=9),
+            # a private method lizard does not report, throwing A's constructor with 1 argument
+            _m("boom", 20, 1, "private", [[1, javaparser.CALL_THROW_NEW, I, 0]])]}]}
     munits = [f"{a}::run@3", f"{a}::help@9", f"{a}::anon@12", f"{a}::A@15", f"{b}::leaf@2",
               f"{b}::ghost@40"]
     sig = list(units.METHOD_FIELDS)
@@ -108,6 +110,8 @@ def test_class_form_A_inputs():
     assert c.c["out_flow"][a] == 7
     b = c.ids.index("src/a/B.java")
     assert c.c["in_np_flow"][b] == 5 and c.c["in_pub_flow"][b] == 0   # package-private leaf
+    # the throw-new of a repository type counts in out and is kept apart (Amendments, 7)
+    assert c.c["out_flow"][b] == 2 and c.c["throw_flow"][b] == 2 and c.c["throw_flow"][a] == 0
     # form B: the constructor's own in is counted only with constructors
     m = J_["method"]
     k = m.ids.index("src/a/A.java::A@15")
@@ -119,6 +123,30 @@ def test_human_oracle_universe():
     J_ = units.joined(record())
     pos, univ = J_["class"].oracles["human_blob"]
     assert pos.tolist() == [True, False] and univ.tolist() == [True, True]
+    # the coupled variant (Amendments, 7): the universe less the uncoupled units
+    rec = record()
+    rec["units"]["method"]["god_idx"]["human_method_long_method"] = [0, 5]
+    rec["units"]["method"]["god_idx"]["human_method_long_method_reviewed"] = [0, 4, 5]
+    m = units.joined(rec)["method"]
+    pos, univ = m.oracles["human_method_long_method|coupled"]
+    assert univ.tolist() == [True, False, False, False, True, False]       # ghost@40 is uncoupled
+    assert pos.tolist() == [True, False, False, False, False, False]
+    assert "human_blob|coupled" in J_["class"].oracles and "brain_method|coupled" not in m.oracles
+
+
+def test_fit_on_non_exempt_units():
+    """Amendments, 7: the |ne forms fit the rule on the units with fD > 0 and flag no other."""
+    from concentration_divergence_study import score
+    J_ = units.joined(record())
+    sel = forms.fit_on("method", ("XDne", "cc", "flow", "all"), J_)
+    assert sel.tolist() == [True, False, True, False, False, True]
+    assert forms.fit_on("method", ("XD", "cc", "flow", "all"), J_) is None
+    out = score.score_level("method", J_)
+    ne = forms.METHOD_NAMES.index("cc*D_flow@all|ne")
+    assert out["cells"][ne, :, :, 1].max() <= int(sel.sum())
+    assert out["throw_new"]["flow"] == [0.0, 8.0]                 # run 3 + anon 3 + ctor 2; boom is not a unit
+    cl = score.score_level("class", J_)
+    assert cl["throw_new"]["flow"] == [2.0, 9.0]
 
 
 def test_form_registry_counts_match_the_plan():
@@ -130,11 +158,12 @@ def test_form_registry_counts_match_the_plan():
     assert c.count("X") == 31 and c.count("XD_A") == 372 and c.count("XO_A") == 93
     assert c.count("XE_A") == 372 and c.count("XA_A") == 372                 # Amendments, 4
     assert c.count("XN") == 30 and "nom*N" not in forms.CLASS_NAMES           # Amendments, 5
+    assert t.count("XDne") == 30 and c.count("XDne_A") == 93                  # Amendments, 7
     assert c.count("D_A") + c.count("O_A") == 15
     assert c.count("XD_B") == 360 and c.count("XO_B") == 90 and c.count("D_B") + c.count("O_B") == 45
     # the exploratory intersection (PLAN.md, Amendments, 3)
-    assert t.count("d") == 6 and t.count("AND") == 60 and t.count("ANDO") == 60 and len(t) == 388
-    assert c.count("d_A") == 12 and c.count("AND") == 372 and c.count("ANDO") == 93 and len(c) == 2257
+    assert t.count("d") == 6 and t.count("AND") == 60 and t.count("ANDO") == 60 and len(t) == 418
+    assert c.count("d_A") == 12 and c.count("AND") == 372 and c.count("ANDO") == 93 and len(c) == 2350
     assert "cognitive_max&d_flow[A,np]" in forms.INDEX["class"] and "cc&d_flow@all" in forms.INDEX["method"]
     assert len(set(forms.CLASS_NAMES)) == len(forms.CLASS_NAMES)
     assert len(set(forms.METHOD_NAMES)) == len(forms.METHOD_NAMES)
