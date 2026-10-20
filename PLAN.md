@@ -248,6 +248,25 @@ The 4 input variants are non-private and public, each without and with construct
 plus, as a sensitivity, **AND**: a unit flagged by the rule on X **and** by the rule on `d_k`
 (both outliers, no compensation), for the primary signal and each definition.
 
+**Exploratory: the intersection of the two outlier sets** *(Amended; see Amendments, 3)*.
+Instead of weighting complexity by divergence, each is put through the same rule on its own and
+the two flag sets are intersected. Every rule is fitted on:
+
+| form | method | class (form A) |
+|---|---|---|
+| `d_k`, the divergence itself | 6 (3 × all calls, no helpers) | 12 (3 × 4 input variants) |
+| AND, X ∩ `d_k` | 60 (10 × 3 × 2) | 372 (31 × 3 × 4) |
+| AND with the outgoing factor, X ∩ `O_k` | 60 (10 × 3 × 2) | 93 (31 × 3) |
+
+They are scored against every oracle like every other form, and so appear in the matrix by
+family (secondary 4). For X\* (class and method), by `mad_z`, each definition and variant, the
+positives of each oracle are reported by region: flagged on X only, on `d_k` only, on both,
+and on either. Each region gets its pooled precision, recall and MCC. The paired micro MCC
+difference against X\*, with its interval, is reported for "both", "either" and `d_k` alone.
+All of this is exploration: it is read after everything above, labelled exploratory, has no
+prediction, and changes no verdict. The registered AND sensitivity is the subset of it with the
+candidate signals and the primary variant.
+
 The full matrix is reported, labelled by role. Only the comparison below decides.
 
 ## Oracles and populations
@@ -530,3 +549,16 @@ was made.
    repositories (3–30%), with the number of form A catchments under flow rising with
    constructors counted (most in the two Spring repositories). No repository of the MLCQ
    confirm half or of the seed-3 sample had been measured.
+
+3. **20 October 2026: an exploratory intersection of the complexity and divergence outliers**
+   (The matrix). The author proposed a second way to combine the two measures, besides
+   multiplying them: flag the outliers of the coupling divergence by the same rule as those of
+   complexity, and see whether the units in both sets are the god units. The registered AND
+   sensitivity already scored that intersection for the primary signal under one variant. It is
+   widened to every signal and variant, with the divergence alone and the outgoing factor as
+   the second set, and the positives are reported by region. It is labelled exploratory: it
+   adds no hypothesis, no prediction and no verdict, and changes nothing registered. Seen when
+   amended: as for Amendment 2. Afterwards, to check the code, the dry run on the same 8
+   MLCQ explore repositories printed the region counts for human Blob and Long Method (5
+   positives each). No repository of the MLCQ confirm half or of the seed-3 sample had been
+   measured.
