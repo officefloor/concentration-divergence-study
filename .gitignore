@@ -15,8 +15,9 @@ __pycache__/
 /results/
 /labels/
 
-# Fontana's data set and the Qualitas Corpus are placed by hand and not redistributed; the
-# record of where they came from (ACCESS.md) is committed.
+# Fontana's data set and the Qualitas Corpus are fetched by scripts/fetch_fontana.sh and not
+# redistributed; the sha256 of every file fetched (SHA256SUMS) and the record of where they came
+# from (ACCESS.md) are committed.
 /inputs/fontana/*
 !/inputs/fontana/ACCESS.md
 !/inputs/fontana/SHA256SUMS
