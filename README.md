@@ -15,8 +15,8 @@ same unit. This study adds the coupling: a JavaParser measurer with its symbol s
 (`measurer/`).
 
 Everything that produced a number is in this repository as code. The steps below are the whole
-procedure; nothing is done by hand except placing Fontana's files (step 6), which cannot be
-downloaded by a script.
+procedure; nothing is done by hand. Fontana's files are fetched by `scripts/fetch_fontana.sh`
+before step 6, which records where they came from and their hashes.
 
 ## Reproducing the study
 
@@ -26,7 +26,7 @@ downloaded by a script.
 ./step3_sample.sh         # MLCQ prepared; the seed-3 Java draw; the 500 measured after exclusions
 ./step4_run_mlcq.sh       # every MLCQ repository at its labelled commit, then scored
 ./step5_run_seed3.sh      # the seed-3 sample, then scored
-./step6_run_fontana.sh    # Fontana's God Class on the Qualitas Corpus (files placed by hand)
+./step6_run_fontana.sh    # Fontana's God Class on the Qualitas Corpus (after scripts/fetch_fontana.sh)
 ./step7_explore.sh        # the explore-half choices -> decisions/ ; commit them
 ./step8_analyse.sh        # the confirmatory analysis, once -> results/analysis.json ; ./record_hashes.sh
 ```

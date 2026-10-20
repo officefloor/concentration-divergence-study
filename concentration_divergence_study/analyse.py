@@ -25,6 +25,9 @@ confirm number exists:
     reverse, unresolved otherwise.
   * Secondary 2 "track closely": the median within-repository |Spearman| of X* with d_flow is
     at least 0.7. The tertile re-reading is reported whatever it is.
+  * The mechanism of a refinement (PLAN.md, Amendments, 4) is read from the exemption-only arm
+    in the primary's own variant (flow, non-private) and the leaf diagnostic under flow,
+    non-private; "contradicted" is the leaf diagnostic's reading of that name.
   * The consistency bootstrap: one generator (seed 12345) draws, for each replicate, the MLCQ
     confirm, the seed-3 and the Fontana repositories in that order (boot.joint_multiplicities).
 """
@@ -122,6 +125,39 @@ def leaf(pop: core.Population, x: str, k: str, inp: str) -> dict:
                      "supported (catchments are called positive less often)", "unresolved")
     return {"key": key, "catchment": {"flagged": tot[0], "positive": tot[1]},
             "rest": {"flagged": tot[2], "positive": tot[3]}, "diff": iv, "reading": r}
+
+
+BY_EXEMPTION = "by the exemption: the claim in the question is supported"
+BY_AMPLIFICATION = ("by amplification: the gain comes from multiplying junctions, and the claim that "
+                    "setting complex leaves aside refines complexity is not supported")
+
+
+def mechanism(primary: dict, exemption_only: dict, leaf_flow: dict) -> dict:
+    """PLAN.md, Amendments, 4: when the primary reads refinement, whether the exemption carries
+    it (the exemption-only arm also refines and the leaf diagnostic is not contradicted) or the
+    amplification does."""
+    if primary["reading"] != core.REFINES:
+        return {"reading": "not read: the primary does not read refinement",
+                "exemption_only": exemption_only["reading"], "leaf": leaf_flow["reading"]}
+    by_exemption = (exemption_only["reading"] == core.REFINES
+                    and not leaf_flow["reading"].startswith("contradicted"))
+    return {"reading": BY_EXEMPTION if by_exemption else BY_AMPLIFICATION,
+            "exemption_only": exemption_only["reading"], "leaf": leaf_flow["reading"]}
+
+
+def decomposition(pop: core.Population, x: str, level: str, k: str = "flow",
+                  variant: str | None = None) -> dict:
+    """Secondary 8 (PLAN.md, Amendments, 4): the two halves of the divergence factor on their
+    own against X*, and the primary arm against each."""
+    D, E, A = (core.factor_arm(f, level, x, k, variant) for f in "DEA")
+    return {"exemption_only": core.compare(pop, x, E, better="the exemption refines complexity",
+                                           worse="the exemption makes it worse"),
+            "amplification_only": core.compare(pop, x, A, better="the amplification refines complexity",
+                                               worse="the amplification makes it worse"),
+            "D_vs_exemption_only": core.compare(pop, E, D, better="the whole factor beats exemption only",
+                                                worse="exemption only beats the whole factor"),
+            "D_vs_amplification_only": core.compare(pop, A, D, better="the whole factor beats amplification only",
+                                                    worse="amplification only beats the whole factor")}
 
 
 def tertiles(pop: core.Population, x: str, k: str = "flow") -> list:
@@ -502,6 +538,7 @@ def analyse(check: bool = False) -> dict:
         c["verdict"] = c["reading"] + (" (underpowered)" if c["gate"]["underpowered"] else "")
         c["pooled_auc"] = pooled_auc(pop, xc, f"{xc}|D_flow")
         c["pooled_auc"]["reading"] = boot.reading((c["pooled_auc"] or {}).get("diff"))
+        c["decomposition"] = decomposition(pop, xc, "class")
         out["primary"][sname] = c
     out["primary"]["javaparser"]["robustness"] = (
         "agrees" if out["primary"]["javaparser"]["reading"] == out["primary"]["joined"]["reading"] else "differs")
@@ -513,11 +550,20 @@ def analyse(check: bool = False) -> dict:
         w["constructors"] = "agrees" if w["reading"] == out["primary"][sname]["reading"] else "differs"
         out["primary"][sname]["with_constructors"] = w
         out["primary"][sname]["methods_vs_with_constructors"] = core.compare(
-            pop, core.primary_arm("class", xc, variant=CTOR), core.primary_arm("class", xc))
+            pop, core.primary_arm("class", xc, variant=CTOR), core.primary_arm("class", xc),
+            better="methods only is better", worse="with constructors is better")
     # 2. the leaf diagnostic
     out["leaf"] = {sname: {f"{k}|{i}": leaf(pops[sname]["blob"], xc, k, i) for k in units.DEFS for i in forms.INPUTS}
                    for sname in SETS}
     _agree(out["leaf"])
+    # 2b. the mechanism of a refinement (PLAN.md, Amendments, 4), read from the primary, the
+    # exemption-only arm and the leaf diagnostic in the primary's variant
+    for sname in SETS:
+        p = out["primary"][sname]
+        p["mechanism"] = mechanism(p, p["decomposition"]["exemption_only"], out["leaf"][sname]["flow|np"])
+    out["primary"]["javaparser"]["mechanism"]["robustness"] = (
+        "agrees" if out["primary"]["javaparser"]["mechanism"]["reading"]
+        == out["primary"]["joined"]["mechanism"]["reading"] else "differs")
     # 3. the consistency analysis
     sets_rows = {"mlcq": [s for s in mlcq if s["meta"].get("usable") and not s["meta"].get("error")],
                  "seed3": [s for s in seed3 if s["meta"].get("usable") and not s["meta"].get("error")],
@@ -562,8 +608,12 @@ def analyse(check: bool = False) -> dict:
         ym = core.primary_arm("method", xm)
         s["method"] = {"all_calls": core.compare(P["long"], xm, ym),
                        "no_helpers": core.compare(P["long"], xm, core.primary_arm("method", xm, variant="nohelp")),
-                       "no_helpers_vs_all": core.compare(P["long"], ym, core.primary_arm("method", xm, variant="nohelp")),
-                       "leaf": {k: leaf(P["long"], xm, k, "all") for k in units.DEFS}}
+                       "no_helpers_vs_all": core.compare(P["long"], ym, core.primary_arm("method", xm, variant="nohelp"),
+                                                         better="no helpers is better", worse="all calls is better"),
+                       "leaf": {k: leaf(P["long"], xm, k, "all") for k in units.DEFS},
+                       "decomposition": decomposition(P["long"], xm, "method")}
+        s["method"]["mechanism"] = mechanism(s["method"]["all_calls"], s["method"]["decomposition"]["exemption_only"],
+                                             s["method"]["leaf"]["flow"])
         s["tool_oracles"] = {o: core.compare(P[o], xc, core.primary_arm("class", xc)) for o in CLASS_ORACLES_SEED3}
         s["tool_oracles_with_constructors"] = {
             o: core.compare(P[o], xc, core.primary_arm("class", xc, variant=CTOR)) for o in CLASS_ORACLES_SEED3}
@@ -637,6 +687,10 @@ def print_report(a: dict) -> None:
         w = p["with_constructors"]
         print(f"     with constructors in the inputs: {_fmt(w['micro'])} -> {w['reading']} "
               f"[{w['constructors']}]; methods only minus with: {_fmt(p['methods_vs_with_constructors']['micro'])}")
+        dc = p["decomposition"]
+        print(f"     exemption only {_fmt(dc['exemption_only']['micro'])} -> {dc['exemption_only']['reading']}; "
+              f"amplification only {_fmt(dc['amplification_only']['micro'])} -> {dc['amplification_only']['reading']}")
+        print(f"     mechanism: {p['mechanism']['reading']}" + (f"  [{p['mechanism'].get('robustness')}]" if sname != "joined" else ""))
     for sname in SETS:
         print(f"\n-- leaf diagnostic [{sname}]")
         for key, v in a["leaf"][sname].items():
@@ -653,7 +707,7 @@ def print_report(a: dict) -> None:
               f"[{c['with_constructors']['constructors']}]")
     s = a["secondary"]["joined"]
     print(f"\n-- secondaries [joined]: method {_fmt(s['method']['all_calls']['micro'])} "
-          f"(no helpers {_fmt(s['method']['no_helpers']['micro'])}); tool oracles "
+          f"(no helpers {_fmt(s['method']['no_helpers']['micro'])}; mechanism: {s['method']['mechanism']['reading']}); tool oracles "
           + "; ".join(f"{o} {_fmt(v['micro'])}" for o, v in s["tool_oracles"].items())
           + f"; Fontana {_fmt(s['fontana']['paired']['micro'])}")
     sj = a["sensitivity"]["joined"]

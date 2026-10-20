@@ -78,16 +78,21 @@ class Population:
         return self.C[:, 0, MAD, 3] > 0
 
 
-def compare(pop: Population, x: str, y: str, rule: int = MAD) -> dict:
+REFINES = "the divergence factor refines complexity"
+WORSENS = "it makes it worse"
+
+
+def compare(pop: Population, x: str, y: str, rule: int = MAD, better: str = REFINES,
+            worse: str = WORSENS) -> dict:
     """The paired comparison of form y against form x on a population: the micro (pooled) MCC
-    difference with its interval and reading, and beside it, not deciding, each arm's pooled
-    precision, recall and false-positive rate, and the macro MCC difference."""
+    difference with its interval and reading (`better` when its lower bound is above 0, `worse`
+    when its upper bound is below), and beside it, not deciding, each arm's pooled precision,
+    recall and false-positive rate, and the macro MCC difference."""
     cx, cy = pop.counts(x, rule), pop.counts(y, rule)
     micro = boot.micro_diff(cx, cy, pop.m)
     return {"x": x, "y": y, "rule": rules.ORDER[rule], "population": pop.label, "n_repos": pop.n,
             "n_repos_with_positive": int(pop.with_positive().sum()),
-            "micro": micro, "reading": boot.reading(micro, "the divergence factor refines complexity",
-                                                    "it makes it worse"),
+            "micro": micro, "reading": boot.reading(micro, better, worse),
             "arms": {x: {"mcc": pop.pooled_mcc(x, rule), **boot.rates(cx.sum(0))},
                      y: {"mcc": pop.pooled_mcc(y, rule), **boot.rates(cy.sum(0))}},
             "macro": boot.macro_diff(cx, cy, pop.m)}
@@ -96,9 +101,17 @@ def compare(pop: Population, x: str, y: str, rule: int = MAD) -> dict:
 def primary_arm(level: str, x: str, k: str = "flow", variant: str | None = None) -> str:
     """The name of X*D_k in the primary form: class form A with non-private methods as inputs
     (constructors not counted); method, all calls (or the variant given)."""
+    return factor_arm("D", level, x, k, variant)
+
+
+def factor_arm(factor: str, level: str, x: str, k: str = "flow", variant: str | None = None) -> str:
+    """The name of X*F_k for a factor F (D: divergence; E: exemption only; A: amplification
+    only; O: outgoing) in the primary variant, or the variant given (PLAN.md, Amendments, 4)."""
     if level == "class":
-        return forms.name(("XD_A", x, k, variant or "np"))
-    return forms.name(("XD", x, k, variant or "all"))
+        if factor == "O":
+            return forms.name(("XO_A", x, k))
+        return forms.name((f"X{factor}_A", x, k, variant or "np"))
+    return forms.name((f"X{factor}", x, k, variant or "all"))
 
 
 def gate(pop: Population, x: str) -> dict:

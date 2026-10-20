@@ -5,6 +5,10 @@ For a coupling definition k, with d_k = out_k - in_k:
     fD_k = max(d_k + 1, 0)      the divergence factor: a catchment (d < 0) is exempt (0), a
                                 pipe (d = 0) counts once, a junction counts d + 1 times
     fO_k = out_k + 1            the outgoing factor (the petclinic observation)
+    fE_k = [d_k >= 0]           exemption only: a catchment is exempt, everything else counts
+                                once (PLAN.md, Amendments, 4)
+    fA_k = max(d_k + 1, 1)      amplification only: nothing is exempt, a junction counts d + 1
+                                times (PLAN.md, Amendments, 4)
 
 Method level, for each of paper one's 10 method signals X, each definition k and each calls
 variant v (`all`: every internal call; `nohelp`: calls to another file only):
@@ -12,6 +16,8 @@ variant v (`all`: every internal call; `nohelp`: calls to another file only):
     X            complexity alone                                   10
     X*D_k@v      X x fD_k                                           60
     X*O_k@v      X x fO_k                                           60
+    X*E_k@v      X x fE_k, exemption only                           60
+    X*A_k@v      X x fA_k, amplification only                       60
     D_k@v, O_k@v the factors alone                                  12
     d_k@v        the divergence d_k itself, by the rule             6
     X&d_k@v      AND: flagged by the rule on X and on d_k@v         60
@@ -24,6 +30,8 @@ units.py), and, for form B, each base method signal X and aggregation g:
     Xc                    complexity alone                                    31
     Xc*D_k[A,i]           A: the class's own coupling weights Xc              372
     Xc*O_k[A]                                                                 93
+    Xc*E_k[A,i]           A, exemption only                                           372
+    Xc*A_k[A,i]           A, amplification only                                       372
     D_k[A,i], O_k[A]                                                          15
     X*D_k[B,i]_g          B: each method's form, aggregated as paper one      360
     X*O_k[B]_g                                                                90
@@ -61,6 +69,8 @@ def method_forms() -> list[tuple]:
     out = [("X", x) for x in METHOD_FIELDS]
     out += [("XD", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
     out += [("XO", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
+    out += [("XE", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
+    out += [("XA", x, k, v) for x in METHOD_FIELDS for k in DEFS for v in VARIANTS]
     out += [("D", k, v) for k in DEFS for v in VARIANTS]
     out += [("O", k, v) for k in DEFS for v in VARIANTS]
     out += [("d", k, v) for k in DEFS for v in VARIANTS]
@@ -73,6 +83,8 @@ def class_forms() -> list[tuple]:
     out = [("X", x) for x in CLASS_SIGNALS]
     out += [("XD_A", x, k, i) for x in CLASS_SIGNALS for k in DEFS for i in INPUTS]
     out += [("XO_A", x, k) for x in CLASS_SIGNALS for k in DEFS]
+    out += [("XE_A", x, k, i) for x in CLASS_SIGNALS for k in DEFS for i in INPUTS]
+    out += [("XA_A", x, k, i) for x in CLASS_SIGNALS for k in DEFS for i in INPUTS]
     out += [("D_A", k, i) for k in DEFS for i in INPUTS]
     out += [("O_A", k) for k in DEFS]
     out += [("XD_B", x, g, k, i) for x in METHOD_FIELDS for g in AGGS for k in DEFS for i in INPUTS]
@@ -89,12 +101,12 @@ def name(spec: tuple) -> str:
     t = spec[0]
     if t == "X":
         return spec[1]
-    if t in ("XD", "XO"):
+    if t in ("XD", "XO", "XE", "XA"):
         return f"{spec[1]}*{t[1]}_{spec[2]}@{spec[3]}"
     if t in ("D", "O"):
         return f"{t}_{spec[1]}@{spec[2]}"
-    if t == "XD_A":
-        return f"{spec[1]}*D_{spec[2]}[A,{spec[3]}]"
+    if t in ("XD_A", "XE_A", "XA_A"):
+        return f"{spec[1]}*{t[1]}_{spec[2]}[A,{spec[3]}]"
     if t == "XO_A":
         return f"{spec[1]}*O_{spec[2]}[A]"
     if t == "D_A":
@@ -123,7 +135,7 @@ def name(spec: tuple) -> str:
 def base(spec: tuple) -> str | None:
     """The complexity signal a form is built from (at the form's own level)."""
     t = spec[0]
-    if t in ("X", "XD", "XO", "XD_A", "XO_A", "AND", "ANDO"):
+    if t in ("X", "XD", "XO", "XE", "XA", "XD_A", "XO_A", "XE_A", "XA_A", "AND", "ANDO"):
         return spec[1]
     if t in ("XD_B", "XO_B"):
         return f"{spec[1]}_{spec[2]}"
@@ -161,6 +173,16 @@ def fD(d: np.ndarray) -> np.ndarray:
 
 def fO(out: np.ndarray) -> np.ndarray:
     return out + 1
+
+
+def fE(d: np.ndarray) -> np.ndarray:
+    """Exemption only: 0 for a catchment, 1 for everything else (PLAN.md, Amendments, 4)."""
+    return (d >= 0).astype(float)
+
+
+def fA(d: np.ndarray) -> np.ndarray:
+    """Amplification only: nothing is exempt; a junction counts d + 1 times (Amendments, 4)."""
+    return np.maximum(d + 1, 1)
 
 
 def _method_B(m, k: str, i: str | None) -> tuple[np.ndarray, np.ndarray]:
@@ -205,6 +227,10 @@ def vector(level: str, spec: tuple, S: dict, grouper: Grouper | None = None) -> 
             return m.values[spec[1]] * fD(method_d(m, spec[2], spec[3]))
         if t == "XO":
             return m.values[spec[1]] * fO(method_out(m, spec[2], spec[3]))
+        if t == "XE":
+            return m.values[spec[1]] * fE(method_d(m, spec[2], spec[3]))
+        if t == "XA":
+            return m.values[spec[1]] * fA(method_d(m, spec[2], spec[3]))
         if t == "D":
             return fD(method_d(m, spec[1], spec[2]))
         if t == "O":
@@ -219,6 +245,10 @@ def vector(level: str, spec: tuple, S: dict, grouper: Grouper | None = None) -> 
         return c.values[spec[1]] * fD(class_d(c, spec[2], spec[3]))
     if t == "XO_A":
         return c.values[spec[1]] * fO(c.c[f"out_{spec[2]}"])
+    if t == "XE_A":
+        return c.values[spec[1]] * fE(class_d(c, spec[2], spec[3]))
+    if t == "XA_A":
+        return c.values[spec[1]] * fA(class_d(c, spec[2], spec[3]))
     if t == "D_A":
         return fD(class_d(c, spec[1], spec[2]))
     if t == "O_A":

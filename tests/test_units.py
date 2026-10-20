@@ -75,6 +75,24 @@ def test_catchment_is_exempt():
     assert v[run] == 5
 
 
+def test_exemption_and_amplification_arms():
+    """PLAN.md, Amendments, 4: fE exempts only, fA amplifies only, and fD = fE * fA."""
+    J_ = units.joined(record())
+    m = J_["method"]
+    d = forms.method_d(m, "flow", "all")
+    assert forms.fE(d).tolist() == [1, 0, 1, 0, 0, 1]           # run (pipe), anon (junction), ghost (uncoupled)
+    assert forms.fA(d).tolist() == [1, 1, 2, 1, 1, 1]           # anon: d = 1 -> 2; catchments not exempt
+    assert np.array_equal(forms.fD(d), forms.fE(d) * forms.fA(d))
+    leaf = m.ids.index("src/a/B.java::leaf@2")
+    assert forms.vector("method", ("XE", "cc", "flow", "all"), J_)[leaf] == 0
+    assert forms.vector("method", ("XA", "cc", "flow", "all"), J_)[leaf] == 9
+    c = J_["class"]
+    a = c.ids.index("src/a/A.java")                          # d(A) = 7 - 3 = 4 under flow, np
+    assert forms.vector("class", ("XE_A", "cc_sum", "flow", "np"), J_)[a] == 1
+    assert forms.vector("class", ("XA_A", "cc_sum", "flow", "np"), J_)[a] == 5
+    assert forms.vector("class", ("XD_A", "cc_sum", "flow", "np"), J_)[a] == 5
+
+
 def test_class_form_A_inputs():
     J_ = units.joined(record())
     c = J_["class"]
@@ -103,14 +121,16 @@ def test_human_oracle_universe():
 def test_form_registry_counts_match_the_plan():
     t = [s[0] for s in forms.METHOD_FORMS]
     assert t.count("X") == 10 and t.count("XD") == 60 and t.count("XO") == 60
+    assert t.count("XE") == 60 and t.count("XA") == 60                       # Amendments, 4
     assert t.count("D") + t.count("O") == 12
     c = [s[0] for s in forms.CLASS_FORMS]
     assert c.count("X") == 31 and c.count("XD_A") == 372 and c.count("XO_A") == 93
+    assert c.count("XE_A") == 372 and c.count("XA_A") == 372                 # Amendments, 4
     assert c.count("D_A") + c.count("O_A") == 15
     assert c.count("XD_B") == 360 and c.count("XO_B") == 90 and c.count("D_B") + c.count("O_B") == 45
     # the exploratory intersection (PLAN.md, Amendments, 3)
-    assert t.count("d") == 6 and t.count("AND") == 60 and t.count("ANDO") == 60 and len(t) == 268
-    assert c.count("d_A") == 12 and c.count("AND") == 372 and c.count("ANDO") == 93 and len(c) == 1483
+    assert t.count("d") == 6 and t.count("AND") == 60 and t.count("ANDO") == 60 and len(t) == 388
+    assert c.count("d_A") == 12 and c.count("AND") == 372 and c.count("ANDO") == 93 and len(c) == 2227
     assert "cognitive_max&d_flow[A,np]" in forms.INDEX["class"] and "cc&d_flow@all" in forms.INDEX["method"]
     assert len(set(forms.CLASS_NAMES)) == len(forms.CLASS_NAMES)
     assert len(set(forms.METHOD_NAMES)) == len(forms.METHOD_NAMES)
