@@ -1,19 +1,23 @@
 """Fontana's God Class (Arcelli Fontana et al., Empirical Software Engineering 21(3), 2016): the
 human replication oracle on the Qualitas Corpus (PLAN.md, Oracles 4).
 
-The files cannot be fetched by a script: the MLCSD page (essere.disco.unimib.it) links its
-datasets through pages and drives, and the Qualitas Corpus is distributed by its maintainers.
-So the material is placed by hand, its access terms written down, and everything after that is
-code:
+The material, fetched by ./scripts/fetch_fontana.sh (the MLCSD binary-class datasets from the
+Google Drive file the MLCSD page links; the Qualitas Corpus web distribution, release 20130901,
+whose r, e and f parts together hold every version, the 20120401 ones Fontana used among them):
 
     inputs/fontana/ACCESS.md        where each file came from, when, and its access terms (the
                                     plan requires them checked and recorded before measurement;
                                     prepare refuses without this file)
-    inputs/fontana/god-class.arff   Fontana's God Class data set (its instances name a system,
-                                    a package and a class, and the label)
-    inputs/fontana/corpus/          the Qualitas Corpus source archives of the systems it names
+    inputs/fontana/god-class.csv    Fontana's God Class data set (binary_class/god-class.csv of
+                                    the MLCSD binary-class datasets): each instance names a
+                                    system (`project`, a path ending in the Qualitas system
+                                    version), a `package`, a class (`complextype`) and the label
+                                    (`is_god_class`)
+    inputs/fontana/corpus/          the Qualitas Corpus, unpacked
 
-    cds fontana-prepare [--arff ...] [--corpus ...]
+The fetch script also writes ACCESS.md and SHA256SUMS, from the pages as they read when fetched.
+
+    cds fontana-prepare [--dataset ...] [--corpus ...]
         labels/fontana-labels.csv   system, class (qualified), label: `fontana_god_class` for a
                                     positive, `fontana_god_class_reviewed` for every instance
         labels/fontana-systems.csv  system, archive (relative to the project), its sha256
@@ -42,7 +46,7 @@ import zipfile
 from . import measure, pins, records, run as run_mod
 
 DIR = os.path.join(pins.INPUTS, "fontana")
-ARFF = os.path.join(DIR, "god-class.arff")
+DATASET = os.path.join(DIR, "god-class.csv")
 CORPUS = os.path.join(DIR, "corpus")
 ACCESS = os.path.join(DIR, "ACCESS.md")
 LABELS_CSV = os.path.join(pins.LABELS, "fontana-labels.csv")
@@ -70,8 +74,17 @@ def read_arff(path: str) -> tuple[list[str], list[list[str]]]:
     return attrs, data
 
 
+def read_table(path: str) -> tuple[list[str], list[list[str]]]:
+    """The data set's attribute names and rows, from its CSV (or an ARFF export of it)."""
+    if path.lower().endswith(".arff"):
+        return read_arff(path)
+    with open(path, newline="", encoding="utf-8", errors="replace") as fh:
+        rows = list(csv.reader(fh))
+    return rows[0], rows[1:]
+
+
 def instances(path: str, system_col: str, package_col: str, class_col: str, label_col: str) -> list[dict]:
-    attrs, data = read_arff(path)
+    attrs, data = read_table(path)
     low = [a.lower() for a in attrs]
     idx = {}
     for name, col in (("system", system_col), ("package", package_col), ("class", class_col),
@@ -85,7 +98,8 @@ def instances(path: str, system_col: str, package_col: str, class_col: str, labe
         pkg = row[idx["package"]].strip()
         cls = row[idx["class"]].strip()
         qn = cls if (pkg and cls.startswith(pkg + ".")) or not pkg else f"{pkg}.{cls}"
-        out.append({"system": row[idx["system"]].strip(), "class": qn,
+        system = row[idx["system"]].strip().rstrip("/").rsplit("/", 1)[-1]   # a path: its last part
+        out.append({"system": system, "class": qn,
                     "positive": row[idx["label"]].strip().lower() in ("true", "1", "yes", "t")})
     return out
 
@@ -118,12 +132,12 @@ def tree_sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def prepare(arff: str, corpus: str, cols: dict) -> dict:
+def prepare(dataset: str, corpus: str, cols: dict) -> dict:
     if not os.path.isfile(ACCESS):
         raise RuntimeError(f"no {ACCESS}: record where the God Class data set and the Qualitas "
                            f"Corpus came from, when, and their access terms before measuring "
                            f"(PLAN.md, Oracles 4)")
-    inst = instances(arff, **cols)
+    inst = instances(dataset, **cols)
     systems = sorted({i["system"] for i in inst})
     os.makedirs(pins.LABELS, exist_ok=True)
     with open(LABELS_CSV, "w", newline="") as fh:
@@ -145,7 +159,7 @@ def prepare(arff: str, corpus: str, cols: dict) -> dict:
             w.writerow([s, os.path.relpath(a, pins.PROJECT_ROOT), tree_sha256(a)])
     return {"instances": len(inst), "positives": sum(i["positive"] for i in inst),
             "systems": len(systems), "systems_without_archive": missing,
-            "arff_sha256": records.sha256(arff)}
+            "dataset_sha256": records.sha256(dataset)}
 
 
 def unpack(src: str, dest: str) -> None:
@@ -250,14 +264,14 @@ def run(out_dir: str, pmd: str, ck: str, allow_dirty: bool = False) -> None:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="cds fontana-prepare", description=__doc__.splitlines()[0])
-    ap.add_argument("--arff", default=ARFF)
+    ap.add_argument("--dataset", default=DATASET)
     ap.add_argument("--corpus", default=CORPUS)
     ap.add_argument("--system-attribute", default="project")
     ap.add_argument("--package-attribute", default="package")
     ap.add_argument("--class-attribute", default="complextype")
     ap.add_argument("--label-attribute", default="is_god_class")
     a = ap.parse_args(argv)
-    out = prepare(a.arff, a.corpus, {"system_col": a.system_attribute, "package_col": a.package_attribute,
+    out = prepare(a.dataset, a.corpus, {"system_col": a.system_attribute, "package_col": a.package_attribute,
                                      "class_col": a.class_attribute, "label_col": a.label_attribute})
     print(json.dumps(out, indent=1))
     return 0

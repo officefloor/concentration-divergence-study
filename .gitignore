@@ -19,3 +19,4 @@ __pycache__/
 # record of where they came from (ACCESS.md) is committed.
 /inputs/fontana/*
 !/inputs/fontana/ACCESS.md
+!/inputs/fontana/SHA256SUMS
