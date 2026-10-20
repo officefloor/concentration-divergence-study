@@ -52,15 +52,23 @@ DECISIONS = os.environ.get("CDS_DECISIONS") or os.path.join(PROJECT_ROOT, "decis
 MOVED_REPOSITORIES = os.path.join(PROJECT_ROOT, "mlcq-moved-repositories.csv")
 
 
+# The files scripts/fetch_fontana.sh writes while it runs (a day-long download that appends a
+# hash line after each corpus part). They record where data came from; no number depends on
+# them, so an append in progress does not make the harness dirty.
+FETCH_RECORDS = ("inputs/fontana/SHA256SUMS", "inputs/fontana/ACCESS.md")
+
+
 def harness_commit() -> str | None:
-    """This harness's git commit, plus '-dirty' when tracked files have uncommitted changes."""
+    """This harness's git commit, plus '-dirty' when tracked files have uncommitted changes
+    (the fetch script's own records, FETCH_RECORDS, excepted)."""
     try:
         sha = subprocess.run(["git", "-C", PROJECT_ROOT, "rev-parse", "HEAD"], capture_output=True,
                              text=True, timeout=30)
         if sha.returncode != 0:
             return None
         dirty = subprocess.run(["git", "-C", PROJECT_ROOT, "status", "--porcelain",
-                                "--untracked-files=no"], capture_output=True, text=True, timeout=30)
+                                "--untracked-files=no", "--", "."]
+                               + [f":!{f}" for f in FETCH_RECORDS], capture_output=True, text=True, timeout=30)
         return sha.stdout.strip() + ("-dirty" if dirty.stdout.strip() else "")
     except (OSError, subprocess.SubprocessError):
         return None
