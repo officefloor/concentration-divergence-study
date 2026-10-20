@@ -388,13 +388,18 @@ holds the commit. A matching SHA means the same code, whoever holds it.
   primary's reading is unchanged by it; the claim that **coupling** refines complexity takes
   *beyond size* as its support and the other two readings as a rival explanation left
   standing. X\*·N against X\* is reported with it.
-- **Effective-sample gate:** set from the explore half before confirm is read. On the MLCQ
-  explore half, the standard deviation `s` of the per-repository paired difference (X\*·D_flow
-  minus X\*, over repositories with at least one reviewed Blob) gives the number of confirm
-  repositories with at least one reviewed Blob needed for a 95% interval of half-width 0.10,
-  `n = (1.96 · s / 0.10)²`, rounded up, and never below 20. The gate, `s` and the date are
-  written to a file and committed with the choice of X\* before the confirm half is read
-  (paper one used 40). Below the gate, the verdict is marked *underpowered*.
+- **Effective-sample gate** *(Amended; see Amendments, 6)*: set from the explore half before
+  confirm is read. On the MLCQ explore half, the primary estimand is computed as it will be on
+  confirm (the pooled paired difference X\*·D_flow minus X\*, with its percentile bootstrap
+  over repositories), giving a half-width `h` over `n_e` explore repositories with at least
+  one reviewed Blob. A pooled interval narrows with the square root of the number of
+  repositories, so the number of confirm repositories with at least one reviewed Blob needed
+  for a half-width of 0.10 is `n = n_e · (h / 0.10)²`, rounded up, and never below 20. The
+  gate, `h`, `n_e` and the date are written to a file and committed with the choice of X\*
+  before the confirm half is read (paper one used 40). Below the gate, the verdict is marked
+  *underpowered*. The gate as first registered, `n = (1.96 · s / 0.10)²` with `s` the standard
+  deviation of the per-repository paired MCC difference over the same repositories, is written
+  beside it for the record and does not decide.
 
 ## Pre-registered secondary tests
 
@@ -636,3 +641,17 @@ was made.
    there. The primary and its reading are unchanged. Made on the same review as Amendment 4.
    Seen when amended: as for Amendment 4. No repository of the MLCQ confirm half or of the
    seed-3 sample had been measured.
+
+6. **21 October 2026: the effective-sample gate is sized from the estimand's own interval**
+   (Primary estimand and decision). As first registered, the gate sized a mean of
+   per-repository paired MCC differences (`n = (1.96 s / 0.10)²`), but the estimand is the
+   pooled difference, whose bootstrap variance is not `s²/n`; and a per-repository MCC over the
+   few reviewed classes of one repository is nearly discrete, so `s` says little about the
+   pooled interval. The gate now scales the explore half's own bootstrap half-width of the
+   pooled difference to the confirm half: `n = n_e (h / 0.10)²`, floor 20. The number as first
+   registered is still written beside it. The MLCQ confirm half holds 67 repositories with a
+   reviewed Blob (112 positives among 1103 reviewed classes, before measurement exclusions),
+   which the registered gate would pass only for `s ≤ 0.42`. Made on the same review as
+   Amendment 4, before step 7 and before any confirm number exists. Seen when amended: as for
+   Amendment 4, and the label counts just given, which are counts of MLCQ's file, not results.
+   No repository of the MLCQ confirm half or of the seed-3 sample had been measured.
