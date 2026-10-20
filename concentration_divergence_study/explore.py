@@ -11,9 +11,11 @@ names its half `explore`, so no confirm number is computed, loaded or printed he
      reviewed class units. The multiplied form is not consulted.
   2. X*_m (method, secondary 5): the same among structure and density (never params), against
      human Long Method.
-  3. The effective-sample gate: s, the standard deviation of the per-repository paired MCC
-     difference (X*·D_flow minus X*) over the explore repositories with at least one reviewed
-     Blob, and n = ceil((1.96 s / 0.10)^2), at least 20.
+  3. The effective-sample gate (PLAN.md, as amended, Amendments, 6): h, the half-width of the
+     explore bootstrap interval of the pooled paired difference (X*·D_flow minus X*), over n_e
+     explore repositories with at least one reviewed Blob, gives n = ceil(n_e (h / 0.10)^2), at
+     least 20; the gate as first registered (from s, the per-repository standard deviation) is
+     written beside it, for the record.
   4. The measurer's validation on the explore half (reported before any result).
 
 Writes decisions/explore-choices.json and decisions/measurer-validation.mlcq-explore.json, once:
@@ -79,8 +81,10 @@ def main(argv=None) -> int:
         print(f"{lvl}: X* = {ch['chosen']}  (pooled mad_z MCC on explore: "
               + ", ".join(f"{x} {v:.3f}" if v is not None else f"{x} -" for x, v in ch["criterion"].items()) + ")")
     g = d["gate"]
-    print(f"gate: s = {g['s']:.4f} over {g['n_repos_used']} explore repositories with a reviewed "
-          f"Blob -> {g['n_required']} confirm repositories with a reviewed Blob needed")
+    print(f"gate: explore half-width h = {g['half_width_explore']:.4f} over {g['n_repos_with_positive_explore']} "
+          f"explore repositories with a reviewed Blob -> {g['n_required']} confirm repositories with a "
+          f"reviewed Blob needed (as first registered: s = {g['v1']['s']:.4f} -> {g['v1']['n_required']}, "
+          f"reported only)")
     print(f"\nwrote {CHOICES} and {VALIDATION}. Commit both now, before the confirm half is read:\n"
           f"    git add decisions && git commit -m 'Record the explore-half choices'")
     return 0

@@ -551,7 +551,9 @@ def analyse(check: bool = False) -> dict:
         y = core.primary_arm("class", xc)
         c = core.compare(pop, xc, y)
         n_pos = int(pop.with_positive().sum())
-        c["gate"] = {"required": gate_n, "repos_with_reviewed_blob": n_pos, "underpowered": n_pos < (gate_n or 0)}
+        c["gate"] = {"required": gate_n, "repos_with_reviewed_blob": n_pos, "underpowered": n_pos < (gate_n or 0),
+                     "required_as_first_registered": (choices["gate"].get("v1") or {}).get("n_required"),
+                     "half_width_confirm": ((c["micro"]["hi"] - c["micro"]["lo"]) / 2) if c["micro"] else None}
         c["verdict"] = c["reading"] + (" (underpowered)" if c["gate"]["underpowered"] else "")
         c["pooled_auc"] = pooled_auc(pop, xc, f"{xc}|D_flow")
         c["pooled_auc"]["reading"] = boot.reading((c["pooled_auc"] or {}).get("diff"))

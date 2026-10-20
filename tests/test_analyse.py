@@ -50,6 +50,10 @@ def test_decomposition_and_mechanism_run_end_to_end():
     assert analyse.mechanism(refine, refine, {"reading": "contradicted (x)"})["reading"] == analyse.BY_AMPLIFICATION
     assert analyse.mechanism(refine, {"reading": "no difference resolved"}, {"reading": "unresolved"})["reading"] == analyse.BY_AMPLIFICATION
     assert analyse.mechanism({"reading": "no difference resolved"}, refine, {"reading": "unresolved"})["reading"].startswith("not read")
+    g = core.gate(pop, x)
+    assert g["n_required"] is None or g["n_required"] >= 20
+    assert g["n_repos_with_positive_explore"] == 4 and g["v1"]["n_repos_used"] == 4
+    assert g["half_width_explore"] != g["half_width_explore"] or g["half_width_explore"] >= 0
     # method level
     mp = core.Population(scores, "joined", "method", "human_method_long_method", "fake Long Method")
     assert mp.n == 8

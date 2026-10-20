@@ -115,17 +115,33 @@ def factor_arm(factor: str, level: str, x: str, k: str = "flow", variant: str | 
 
 
 def gate(pop: Population, x: str) -> dict:
-    """PLAN.md, Effective-sample gate: s is the standard deviation of the per-repository paired
-    MCC difference (X*D_flow minus X*), over the repositories with at least one reviewed
-    positive; n = ceil((1.96 s / 0.10)^2), never below 20."""
+    """PLAN.md, Effective-sample gate (as amended, Amendments, 6): the 95% percentile bootstrap
+    interval of the pooled paired difference (X*D_flow minus X*) over the explore population has
+    half-width h over n_e explore repositories with at least one reviewed positive; a pooled
+    interval narrows with the square root of the number of repositories, so the confirm
+    repositories with a reviewed positive needed for a half-width of 0.10 are
+    n = ceil(n_e (h / 0.10)^2), never below 20. The gate as first registered (s, the standard
+    deviation of the per-repository paired MCC difference; n = ceil((1.96 s / 0.10)^2)) is
+    computed beside it, under `v1`, for the record; it does not decide."""
     keep = pop.with_positive()
-    d = (boot.per_item_mcc(pop.counts(primary_arm(pop.level, x))[keep])
-         - boot.per_item_mcc(pop.counts(x)[keep]))
+    n_e = int(keep.sum())
+    y = primary_arm(pop.level, x)
+    micro = boot.micro_diff(pop.counts(x), pop.counts(y), pop.m) if pop.n else None
+    h = (micro["hi"] - micro["lo"]) / 2 if micro else float("nan")
+    n = (max(pins.GATE_FLOOR, math.ceil(n_e * (h / pins.HALF_WIDTH) ** 2))
+         if not math.isnan(h) and n_e > 0 else None)
+    d = (boot.per_item_mcc(pop.counts(y)[keep]) - boot.per_item_mcc(pop.counts(x)[keep]))
     s = float(np.std(d, ddof=1)) if len(d) > 1 else float("nan")
-    n = max(pins.GATE_FLOOR, math.ceil((1.96 * s / pins.HALF_WIDTH) ** 2)) if not math.isnan(s) else None
-    return {"s": s, "n_required": n, "n_repos_used": int(keep.sum()),
-            "rule": "n = ceil((1.96 s / 0.10)^2), at least 20; s over the explore repositories "
-                    "with at least one reviewed positive"}
+    n1 = max(pins.GATE_FLOOR, math.ceil((1.96 * s / pins.HALF_WIDTH) ** 2)) if not math.isnan(s) else None
+    return {"n_required": n, "half_width_explore": h, "interval_explore": micro,
+            "n_repos_with_positive_explore": n_e, "n_repos_explore": pop.n,
+            "rule": "n = ceil(n_e (h / 0.10)^2), at least 20; h the half-width of the explore "
+                    "bootstrap interval of the pooled paired difference, n_e the explore "
+                    "repositories with at least one reviewed positive (PLAN.md, Amendments, 6)",
+            "v1": {"s": s, "n_required": n1, "n_repos_used": n_e,
+                   "rule": "as first registered: n = ceil((1.96 s / 0.10)^2), at least 20; s over "
+                           "the explore repositories with at least one reviewed positive; "
+                           "reported, not deciding"}}
 
 
 def choose(pop: Population, candidates) -> dict:
