@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The coupling measurer: JavaParser with its symbol solver, pinned. One shaded jar,
+  target/divergence-measurer.jar, built by ./setup.sh (mvn -B -q package). Every coupling number
+  of the study is a number of this code at the harness commit, and of JavaParser at this version;
+  the version is recorded with every measured repository and checked against the pin
+  (concentration_divergence_study/javaparser.py, JAVAPARSER_VERSION).
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>net.officefloor.divergence</groupId>
+  <artifactId>divergence-measurer</artifactId>
+  <version>0.0.1</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- PINNED. A change here changes every coupling number: change it with the pin in
+         concentration_divergence_study/javaparser.py, as its own commit. -->
+    <javaparser.version>3.28.2</javaparser.version>
+    <!-- Reproducible jar contents (fixed entry timestamps). -->
+    <project.build.outputTimestamp>2026-10-20T00:00:00Z</project.build.outputTimestamp>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.github.javaparser</groupId>
+      <artifactId>javaparser-symbol-solver-core</artifactId>
+      <version>${javaparser.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>divergence-measurer</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.2</version>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <JavaParser-Version>${javaparser.version}</JavaParser-Version>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>net.officefloor.divergence.Measurer</mainClass>
+                  <manifestEntries>
+                    <JavaParser-Version>${javaparser.version}</JavaParser-Version>
+                  </manifestEntries>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

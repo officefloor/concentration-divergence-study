@@ -1,0 +1,124 @@
+"""What the explore step and the analysis share: the populations of repositories each definition
+is read on, and the paired estimand.
+
+A population is the usable repositories of one measured set (paper one's substance floor,
+study.is_usable, on the measured row) whose score carries the definition at that level with a
+non-empty universe: for a human definition, at least one reviewed unit (a repository whose
+reviewed units hold no positive is KEPT: its reviewed units are negatives, as paper one's
+human_readout reads them); for a tool definition, the tool's panel ran. Its cells are an array
+C[repository, form, rule, 4] of paper one's lean counts.
+"""
+from __future__ import annotations
+
+import math
+
+import numpy as np
+
+from . import boot, forms, pins, rules
+
+MAD = rules.ORDER.index(pins.OUTLIER_RULE)
+
+
+class Population:
+    def __init__(self, scores: list[dict], set_name: str, level: str, oracle: str, label: str = ""):
+        self.set_name, self.level, self.oracle = set_name, level, oracle
+        self.label = label or f"{oracle} ({set_name})"
+        self.meta, cells, self.extracts, self.lv = [], [], [], []
+        for sc in scores:
+            m = sc["meta"]
+            if not m.get("usable") or m.get("error"):
+                continue
+            lv = (sc.get("sets") or {}).get(set_name, {}).get(level)
+            if not lv or oracle not in lv["oracles"]:
+                continue
+            oi = lv["oracles"].index(oracle)
+            c = lv["cells"][:, :, oi, :]
+            if c[0, MAD, 0] == 0:
+                continue                                  # no unit in the definition's universe
+            self.meta.append(m)
+            cells.append(c)
+            self.extracts.append((lv.get("extracts") or {}).get(oracle))
+            self.lv.append(lv)
+        self.n = len(self.meta)
+        nf = len(forms.SPECS[level])
+        self.C = np.stack(cells) if cells else np.zeros((0, nf, len(rules.ORDER), 4), np.int32)
+        self._m = None
+
+    def subset(self, keep: np.ndarray) -> "Population":
+        p = object.__new__(Population)
+        p.set_name, p.level, p.oracle, p.label = self.set_name, self.level, self.oracle, self.label
+        idx = np.flatnonzero(keep)
+        p.meta = [self.meta[i] for i in idx]
+        p.extracts = [self.extracts[i] for i in idx]
+        p.lv = [self.lv[i] for i in idx]
+        p.C = self.C[idx]
+        p.n = len(idx)
+        p._m = None
+        return p
+
+    @property
+    def m(self) -> np.ndarray:
+        """Paper one's bootstrap multiplicities for this population (its own generator)."""
+        if self._m is None:
+            self._m = boot.multiplicities(self.n)
+        return self._m
+
+    def f(self, form: str) -> int:
+        return forms.INDEX[self.level][form]
+
+    def counts(self, form: str, rule: int = MAD) -> np.ndarray:
+        return self.C[:, self.f(form), rule, :]
+
+    def pooled_mcc(self, form: str, rule: int = MAD) -> float | None:
+        if self.n == 0:
+            return None
+        return float(boot.mcc_counts(self.counts(form, rule).sum(0)))
+
+    def with_positive(self) -> np.ndarray:
+        return self.C[:, 0, MAD, 3] > 0
+
+
+def compare(pop: Population, x: str, y: str, rule: int = MAD) -> dict:
+    """The paired comparison of form y against form x on a population: the micro (pooled) MCC
+    difference with its interval and reading, and beside it, not deciding, each arm's pooled
+    precision, recall and false-positive rate, and the macro MCC difference."""
+    cx, cy = pop.counts(x, rule), pop.counts(y, rule)
+    micro = boot.micro_diff(cx, cy, pop.m)
+    return {"x": x, "y": y, "rule": rules.ORDER[rule], "population": pop.label, "n_repos": pop.n,
+            "n_repos_with_positive": int(pop.with_positive().sum()),
+            "micro": micro, "reading": boot.reading(micro, "the divergence factor refines complexity",
+                                                    "it makes it worse"),
+            "arms": {x: {"mcc": pop.pooled_mcc(x, rule), **boot.rates(cx.sum(0))},
+                     y: {"mcc": pop.pooled_mcc(y, rule), **boot.rates(cy.sum(0))}},
+            "macro": boot.macro_diff(cx, cy, pop.m)}
+
+
+def primary_arm(level: str, x: str, k: str = "flow", variant: str | None = None) -> str:
+    """The name of X*D_k in the primary form: class form A with non-private inputs; method,
+    all calls (or the variant given)."""
+    if level == "class":
+        return forms.name(("XD_A", x, k, variant or "np"))
+    return forms.name(("XD", x, k, variant or "all"))
+
+
+def gate(pop: Population, x: str) -> dict:
+    """PLAN.md, Effective-sample gate: s is the standard deviation of the per-repository paired
+    MCC difference (X*D_flow minus X*), over the repositories with at least one reviewed
+    positive; n = ceil((1.96 s / 0.10)^2), never below 20."""
+    keep = pop.with_positive()
+    d = (boot.per_item_mcc(pop.counts(primary_arm(pop.level, x))[keep])
+         - boot.per_item_mcc(pop.counts(x)[keep]))
+    s = float(np.std(d, ddof=1)) if len(d) > 1 else float("nan")
+    n = max(pins.GATE_FLOOR, math.ceil((1.96 * s / pins.HALF_WIDTH) ** 2)) if not math.isnan(s) else None
+    return {"s": s, "n_required": n, "n_repos_used": int(keep.sum()),
+            "rule": "n = ceil((1.96 s / 0.10)^2), at least 20; s over the explore repositories "
+                    "with at least one reviewed positive"}
+
+
+def choose(pop: Population, candidates) -> dict:
+    """X*: the candidate whose mad_z flags maximise the pooled MCC (ties: the first in paper one's
+    family order). The multiplied form is not consulted."""
+    crit = {x: pop.pooled_mcc(x) for x in candidates}
+    best = max(candidates, key=lambda x: (crit[x] if crit[x] is not None else -2, -candidates.index(x)))
+    return {"chosen": best, "criterion": crit, "candidates": list(candidates),
+            "population": pop.label, "n_repos": pop.n}

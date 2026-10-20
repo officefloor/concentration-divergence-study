@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "concentration-divergence-study"
+version = "0.0.1"
+description = "Does weighting a unit's complexity by its coupling divergence recover the units people call god classes and methods better than complexity alone? A measurement harness."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "Daniel Sagenschneider" }]
+keywords = ["code-quality", "complexity", "coupling", "god-class", "code-smell", "static-analysis"]
+# PINNED. Complexity is paper one's extractor at its released commit (PLAN.md, Units and
+# measures), so every baseline number is the number paper one would produce on the same unit:
+# the package is installed from that exact commit, and preflight refuses any other
+# (concentration_divergence_study/pins.py). The sampler is the one paper one used. numpy only
+# speeds up the outlier rules; tests/test_rules.py checks the fast rules flag exactly what paper
+# one's own rules flag.
+dependencies = [
+    "complexity-concentration-study @ git+https://github.com/officefloor/complexity-concentration-study@393da766e5630ab05478a9b1ce896e3626741b09",
+    "lizard==1.23.0",
+    "open-source-repository-sampler==0.1.0",
+    "numpy==2.5.3",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.scripts]
+concentration-divergence-study = "concentration_divergence_study.cli:main"
+cds = "concentration_divergence_study.cli:main"
+
+[tool.setuptools]
+packages = ["concentration_divergence_study"]
