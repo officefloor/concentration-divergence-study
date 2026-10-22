@@ -18,7 +18,8 @@
 #    "r" hold every version. Each tar is unpacked into inputs/fontana/corpus/.
 # 4. inputs/fontana/SHA256SUMS (every file fetched) and inputs/fontana/ACCESS.md (where, when,
 #    and the terms quoted from the saved pages). Commit both. A second run verifies every file
-#    against SHA256SUMS and refuses on a mismatch.
+#    against SHA256SUMS and refuses on a mismatch, and keeps the section of ACCESS.md recorded
+#    by hand ("## The maintainer's reply" to the end of the file) as it is.
 #
 # Resumable: curl continues a partial download (-C -). Needs curl, tar, unzip, sha256sum and
 # the project's venv (step 1).
@@ -118,11 +119,15 @@ fi
 
 echo "=== 4. ACCESS.md ==="
 text() { sed -e 's/<[^>]*>/ /g' "$1" | tr -s ' \n' ' ' | sed -e 's/&nbsp;/ /g'; }
+# The maintainer's reply is recorded by hand after the first run; a later run keeps it.
+REPLY=""
+[ -f "$D/ACCESS.md" ] && REPLY="$(sed -n "/^## The maintainer's reply\$/,\$p" "$D/ACCESS.md")"
 {
   echo "# Fontana's God Class and the Qualitas Corpus: where they came from"
   echo
-  echo "Written by \`./scripts/fetch_fontana.sh\` on $TODAY (UTC); do not edit by hand. The sha256 of"
-  echo "every file fetched is in \`SHA256SUMS\`; the pages quoted are saved in \`provenance/\`."
+  echo "Written by \`./scripts/fetch_fontana.sh\` on $TODAY (UTC); do not edit by hand, except the"
+  echo "maintainer's reply at the end, which a later run keeps. The sha256 of every file fetched is"
+  echo "in \`SHA256SUMS\`; the pages quoted are saved in \`provenance/\`."
   echo
   echo "## The data set"
   echo
@@ -148,7 +153,12 @@ text() { sed -e 's/<[^>]*>/ /g' "$1" | tr -s ' \n' ' ' | sed -e 's/&nbsp;/ /g'; 
   echo
   echo "Check these terms before measuring, and record any reply from the corpus's maintainer here"
   echo "in a commit of its own (PLAN.md, Oracles 4)."
-} > "$D/ACCESS.md"
+  if [ -n "$REPLY" ]; then
+    echo
+    printf '%s\n' "$REPLY"
+  fi
+} > "$D/ACCESS.md.new"
+mv "$D/ACCESS.md.new" "$D/ACCESS.md"
 sha256sum "$PROV"/*.html | sed -e "s|  $PROV/|  provenance/|" >> "$SUMS"
 sort -u -k2 "$SUMS" -o "$SUMS"
 

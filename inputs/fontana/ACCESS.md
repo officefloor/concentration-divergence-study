@@ -1,7 +1,8 @@
 # Fontana's God Class and the Qualitas Corpus: where they came from
 
-Written by `./scripts/fetch_fontana.sh` on 2026-10-20 (UTC); do not edit by hand. The sha256 of
-every file fetched is in `SHA256SUMS`; the pages quoted are saved in `provenance/`.
+Written by `./scripts/fetch_fontana.sh` on 2026-10-20 (UTC); do not edit by hand, except the
+maintainer's reply at the end, which a later run keeps. The sha256 of every file fetched is
+in `SHA256SUMS`; the pages quoted are saved in `provenance/`.
 
 ## The data set
 
