@@ -577,6 +577,103 @@ Nothing is measured on the MLCQ confirm half or the seed-3 sample before the tag
 6. Report the primary, then the leaf diagnostic, then the consistency analysis and its verdict
    on the construct, then the secondaries, then the sensitivities.
 
+## Related work from the Qualitas Corpus's maintainer
+
+Recorded for the paper's related work (Amendment 8). Nothing here changes a measure, an arm, an
+estimand or a verdict. Ewan Tempero (University of Auckland) maintains the Qualitas Corpus that
+Fontana's God Class is drawn from (Oracles 4), and several of his group's recent papers are
+close to this study. What each one is, and where it meets this study:
+
+1. **Zhang, Wen and Tempero, "Analyzing variations in dependency distributions due to code
+   smell interactions"** (arXiv:2509.03896, v3 November 2025). 116 Java systems from GitHub;
+   five Lanza–Marinescu smells (Feature Envy, Brain Method, God Class, Brain Class, Data Class)
+   from their own CodeQL detector, the stricter bound taken where a threshold is a range,
+   precision checked by hand on about 95 instances per smell and recall not checked.
+   Dependencies are typed and directed triples (relation, source kind, target kind) over ten
+   relations: call, create, contain, cast, use, throws, return, parameter, extend, implement.
+   Smell interactions carry more dependencies in 28 of 36 contrasts (small to medium Cliff's
+   δ), and the types that differ most are **data access** (method → accessor call, method →
+   field use) and method → method calls; they label God Class a *strong method consumer*.
+   - *Where it meets this study:* the closest published typology to `in` and `out`. Their
+     direction is relative to a pair of smells, not to the unit's own control flow, and they
+     do not weight data passed against data received, so they measure how much a smell
+     depends, where this study measures which way the data goes. Their finding that data
+     access separates smelly from clean code is the same intuition as sinew, reached on tool
+     labels. Their `throws` relation is the counterpart of Amendment 7(c).
+   - *Its oracle* is an absolute detection strategy with no recall check, so it is a tool
+     oracle in this study's terms (Oracles 3), not a human one.
+
+2. **Zhang, Wen and Tempero, "The influence of code smells in efferent neighbors on class
+   stability"** (arXiv:2602.12950, MSR 2026 registered report). 100 top-starred Java projects,
+   one year of history; ten smells by JSpIRIT (Lanza–Marinescu strategies); dependencies, size
+   and efferent coupling by CodeQL; change frequency and change size as outcomes;
+   negative-binomial GLMMs with a random intercept per project, controls for class size and
+   the number of efferent neighbours, one-sided Wald tests, Benjamini–Hochberg within each
+   question. Protocol only; no results.
+   - *Where it meets this study:* pre-registered and confirmatory, as this is. It handles
+     variation between repositories with a random intercept where this study and paper one
+     standardise within each repository, and it controls size in the model where this study
+     adds a size null arm (Amendment 5). Its efferent neighbours are the classes a unit hands
+     on to, the outgoing side of `D_flow`, counted rather than weighted by data. Its outcome,
+     change, is the outcome the git-history study deferred from this one would use.
+
+3. **Zhang, Wen and Tempero, "Can LLMs produce better object-oriented designs than
+   human-involved development?"** (arXiv:2605.19901, May 2026). One postgraduate Java
+   assignment in three conditions: human-involved before LLMs were widely used (PreAI), human-involved after (PostAI),
+   and generated end to end by three LLMs under three prompt variants (PureAI). CK metrics per
+   project as sum, mean and **max-percentage** (the largest class's share of the project's
+   WMC, LOC or CBO); smells by DesigniteJava and PMD as density per KLOC. PureAI has fewer
+   classes and lower total size, complexity and coupling, but *higher* mean and max-percentage
+   and lower cohesion: median LOC% 31% PreAI, 40% PostAI, 41–52% PureAI. Smell density is
+   lower in PureAI; the class-level difference is negligible. PostAI sits between, closer to
+   PureAI. The authors read it as oversimplification: "burden is concentrated in fewer
+   classes".
+   - *Where it meets this study:* the only evidence found that code written with LLMs moves
+     concentration while threshold-based detectors register nothing, which is the purpose
+     stated at the top of this plan. It is also the shape this study tests: their
+     oversimplified classes gather several domain concepts with low cohesion, a god class in
+     the making, not a complex leaf. Max-percentage is bounded below by 1/#classes, so fewer
+     classes raise it on that account alone; a per-unit outlier rule has no such floor.
+   - *Not in this study:* the design (fixed task, authorship condition) would let the
+     relative rule and `D_flow` be read on code whose population is known to have moved; a
+     candidate exploratory population for a later study, if the projects can be obtained.
+
+4. **Tempero and Ralph, "Making software metrics useful"** (IEEE Computer, in press, 2026;
+   arXiv:2603.16012). Metrics are rarely used for construction decisions because they were
+   built without metrology. A metric must name its construct, entity and attribute, satisfy
+   the representation condition, and show convergent and discriminant validity. Cyclomatic
+   complexity counts linearly independent paths, "at most one facet" of complexity. A
+   construct needs a model of several indicators, not a best single metric.
+   - *Where it meets this study:* the consistency analysis ("Does the construct hold up") is
+     this study's answer for sinew, and the paper should present it in their terms: construct
+     (sinew), entity (method, class), attribute (direction of data coupled to the control
+     flow), indicator (`D_flow` and its variants). `D_flow` is one indicator of that
+     construct, and the paper should say so. Their question "do I need to refactor this
+     class?" is the decision this study's purpose serves.
+   - Companion: **Arif, Kuutila and Ralph, ESEM 2026** (arXiv:2609.20411; Tempero not an
+     author). Factor analysis of class-level metrics: Size, Cohesion, In-Coupling,
+     Out-Coupling and two Inheritance factors; complexity not cleanly one factor. That
+     **in-coupling and out-coupling load as separate constructs** supports measuring `in`
+     and `out` apart and reading the outgoing-only arm, and argues against treating coupling
+     as one quantity.
+
+5. **Tempero and Ralph, "A framework for defining coupling metrics"** (Science of Computer
+   Programming, 2018). Coupling defined from the dependency as its basic unit, with the kind
+   and direction of each dependency stated. The full text was not read when this was
+   recorded; the paper should state `in` and `out` in the framework's terms once it has been.
+
+6. **Baxter et al., "Understanding the shape of Java software"** (OOPSLA 2006) and
+   **Tempero et al., "The Qualitas Corpus"** (APSEC 2010). Some structural metrics in Java
+   follow power laws and some do not, and their shape varies with the application: the
+   premise for fitting the rule per repository, and for "scale-free, not shape-free". The
+   corpus is the source of Fontana's systems (Oracles 4) and is cited wherever that oracle is.
+
+Paper one cites 3, 4 (once), Arif et al. and Baxter et al. (added to its `paper/main.tex` on
+22 October 2026), with He, Miller, Agarwal, Kästner and Vasilescu (MSR 2026, arXiv:2511.04427)
+as the independent, larger source beside 3: 806 open-source projects that adopted Cursor
+against 1,380 matched projects that did not, with a persistent rise in SonarQube cognitive
+complexity after adoption. 1, 2, 5 and the Qualitas Corpus are for this study's paper.
+
 ## Interests
 
 The author created OfficeFloor. This study does not compare frameworks and samples repositories
@@ -691,3 +788,12 @@ was made.
    Amendment 4. No repository of the MLCQ confirm half or of the seed-3 sample had been
    measured; the two validation repositories of Procedure 2 are measured again by step 2 with
    the rebuilt measurer and the 8-hour budget.
+
+8. **22 October 2026: related work from the Qualitas Corpus's maintainer is recorded** (new
+   section, Related work from the Qualitas Corpus's maintainer). Ewan Tempero agreed to the use
+   of the Qualitas Corpus for Fontana's God Class (Oracles 4), and his group's recent papers
+   were read for the paper's related work. The section records what each one is and where it
+   meets this study. It adds no hypothesis, arm, estimand or verdict, and changes nothing
+   registered; one candidate population (item 3) is noted as outside this study. Seen when
+   amended: as for Amendment 7, and the papers, which hold no data of this study. No
+   repository of the MLCQ confirm half or of the seed-3 sample had been measured.
