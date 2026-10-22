@@ -27,3 +27,16 @@ every file fetched is in `SHA256SUMS`; the pages quoted are saved in `provenance
 
 Check these terms before measuring, and record any reply from the corpus's maintainer here
 in a commit of its own (PLAN.md, Oracles 4).
+
+## The maintainer's reply
+
+Recorded by hand, in a commit of its own. Ewan Tempero, the corpus's maintainer, was asked
+whether the Qualitas Corpus may be used for this study; his reply, received before
+22 October 2026 (PLAN.md, Amendments, 8), reads in full:
+
+> Hello,
+> Your use of the Qualitas Corpus is acceptable. Good luck with your research.
+> regards,
+> --ewan
+
+It sets no condition. The corpus is used under it and is not redistributed (`.gitignore`).
