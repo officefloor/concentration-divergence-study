@@ -30,7 +30,7 @@ MEASURER_BUDGET_SECONDS = 8 * 3600
 # --- the plan's constants (PLAN.md) ------------------------------------------------------------
 SEED3 = 3                                   # the tool-oracle sample's seed
 SEED3_USABLE = 500                          # usable repositories measured from it
-SEED3_DRAW_TARGET = 540                     # drawn with a margin for the exclusions (step 3)
+SEED3_DRAW_TARGET = 580                     # drawn with a margin for the exclusions (step 3; see sample/attempt-1)
 BOOTSTRAP_B = 2000
 BOOTSTRAP_SEED = 12345
 HALF_WIDTH = 0.10                           # the effective-sample gate's target half-width
