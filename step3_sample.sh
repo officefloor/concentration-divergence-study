@@ -19,6 +19,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 export PYTHONUNBUFFERED=1
+# Temporary files (clones, checkouts) on disk in the project, not in a small RAM-backed /tmp.
+export TMPDIR="$PWD/.tmp"
+mkdir -p "$TMPDIR"
 
 PY=".venv/bin/python"
 SAMPLER=".venv/bin/open-source-repository-sampler"

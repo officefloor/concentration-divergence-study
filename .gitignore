@@ -5,6 +5,9 @@ __pycache__/
 .venv/
 .pytest_cache/
 
+# Temporary files of the step scripts (TMPDIR): clones and checkouts, on disk rather than in /tmp.
+/.tmp/
+
 # Downloaded tools (./setup.sh fetches the pinned, sha256-verified artifacts) and the build.
 /lib/
 /measurer/target/

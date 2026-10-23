@@ -15,6 +15,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 export PYTHONUNBUFFERED=1
+# Temporary files (clones, checkouts) on disk in the project, not in a small RAM-backed /tmp.
+export TMPDIR="$PWD/.tmp"
+mkdir -p "$TMPDIR"
 
 PY=".venv/bin/python"
 [ -x "$PY" ] || { echo "ERROR: $PY not found — run ./step1_setup.sh first"; exit 1; }
