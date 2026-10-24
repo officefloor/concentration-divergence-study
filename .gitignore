@@ -24,3 +24,6 @@ __pycache__/
 /inputs/fontana/*
 !/inputs/fontana/ACCESS.md
 !/inputs/fontana/SHA256SUMS
+
+# Blog drafts for blog.officefloor.net; not part of the study.
+/blog/
