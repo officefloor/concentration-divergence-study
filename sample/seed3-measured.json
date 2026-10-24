@@ -1,0 +1,499 @@
+{
+ "source": "sample/open-source-repository-sample.seed3.csv",
+ "source_sha256": "6c725798c5cd78e90e5004218049aa1115b43649bfa34d3157dbe59693d7f1ee",
+ "exclusion_lists": {
+  "paper one pilot (seed 1)": {
+   "path": "inputs/paper-one/pilot-run-v1-repos.txt",
+   "sha256": "2b7b801ab9b1d27708a8d2045d40f22bfbed660eac458154143eec17c8241f9b"
+  },
+  "paper one main sample (seed 2)": {
+   "path": "inputs/paper-one/sample/open-source-repository-sample.csv",
+   "sha256": "f37afd6f621ed253f21fdf833284b12683d3b39c0cfe8d07f9ee2f094580dd40"
+  },
+  "paper one Java supplement (seed 2)": {
+   "path": "inputs/paper-one/sample/open-source-repository-sample.java-supplement.csv",
+   "sha256": "b6c69f9c40289a02fa27779481800d33432edd96a1e9dd1337f4bd24d7921337"
+  },
+  "MLCQ": {
+   "path": "labels/mlcq-repos.mapped.csv",
+   "sha256": "42c5efaa06e44340cc091de2d34c7f530925b2fd7a2ee91383867adec4d6a9b4"
+  },
+  "MLCQ (labelled URL)": {
+   "path": "labels/mlcq-repos.csv",
+   "sha256": "8191556678253be8216d76278f65bd066f6a0f041a5c4f981276f400c51b13dd"
+  }
+ },
+ "usable_in_draw": 580,
+ "measured": 500,
+ "last_draw_measured": 700,
+ "excluded": [
+  {
+   "full_name": "google/guava",
+   "draw": 6,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "ikarus23/MifareClassicTool",
+   "draw": 9,
+   "in": [
+    "paper one pilot (seed 1)"
+   ]
+  },
+  {
+   "full_name": "LuckyJayce/MVCHelper",
+   "draw": 13,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "00-Evan/shattered-pixel-dungeon",
+   "draw": 24,
+   "in": [
+    "paper one pilot (seed 1)"
+   ]
+  },
+  {
+   "full_name": "Bigkoo/Android-PickerView",
+   "draw": 27,
+   "in": [
+    "paper one pilot (seed 1)"
+   ]
+  },
+  {
+   "full_name": "prestodb/presto",
+   "draw": 33,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "alibaba/druid",
+   "draw": 39,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "huanghaibin-dev/CalendarView",
+   "draw": 69,
+   "in": [
+    "paper one main sample (seed 2)",
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "apache/dubbo",
+   "draw": 105,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "apache/iotdb",
+   "draw": 132,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "pagehelper-org/Mybatis-PageHelper",
+   "draw": 162,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "spring-projects/spring-data-examples",
+   "draw": 180,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "obiscr/ChatGPT",
+   "draw": 208,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "alibaba/compileflow",
+   "draw": 211,
+   "in": [
+    "paper one pilot (seed 1)"
+   ]
+  },
+  {
+   "full_name": "loks666/get_jobs",
+   "draw": 237,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "jetlinks/jetlinks-community",
+   "draw": 240,
+   "in": [
+    "paper one main sample (seed 2)",
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "pascaldekloe/colfer",
+   "draw": 251,
+   "in": [
+    "paper one pilot (seed 1)"
+   ]
+  },
+  {
+   "full_name": "asLody/VirtualApp",
+   "draw": 252,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "spring-projects/spring-session",
+   "draw": 253,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "cabaletta/baritone",
+   "draw": 255,
+   "in": [
+    "paper one main sample (seed 2)",
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "awsdocs/aws-doc-sdk-examples",
+   "draw": 258,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "spring-projects/spring-framework",
+   "draw": 264,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "DrKLO/Telegram",
+   "draw": 282,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "Qihoo360/hbox",
+   "draw": 301,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "apache/ignite",
+   "draw": 321,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "Anuken/Mindustry",
+   "draw": 339,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "bjmashibing/InternetArchitect",
+   "draw": 349,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "alibaba/canal",
+   "draw": 351,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "beemdevelopment/Aegis",
+   "draw": 357,
+   "in": [
+    "paper one pilot (seed 1)"
+   ]
+  },
+  {
+   "full_name": "apache/nifi",
+   "draw": 378,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "Bearded-Hen/Android-Bootstrap",
+   "draw": 399,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "LuckSiege/PictureSelector",
+   "draw": 426,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "Tencent/tinker",
+   "draw": 435,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "apache/hive",
+   "draw": 438,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "agentscope-ai/agentscope-java",
+   "draw": 441,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "linkedin/ambry",
+   "draw": 445,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "apache/hadoop",
+   "draw": 462,
+   "in": [
+    "paper one Java supplement (seed 2)",
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "realm/realm-java",
+   "draw": 474,
+   "in": [
+    "paper one pilot (seed 1)"
+   ]
+  },
+  {
+   "full_name": "pmd/pmd",
+   "draw": 477,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "apache/hbase",
+   "draw": 489,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "apache/ofbiz-framework",
+   "draw": 490,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "apache/pulsar",
+   "draw": 495,
+   "in": [
+    "paper one Java supplement (seed 2)",
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "rbmonster/learning-note",
+   "draw": 514,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "apache/activemq",
+   "draw": 523,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "apache/beam",
+   "draw": 537,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "FreddyChen/NettyChat",
+   "draw": 559,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "apache/rocketmq",
+   "draw": 582,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "JessYanCoding/MVPArms",
+   "draw": 600,
+   "in": [
+    "paper one pilot (seed 1)"
+   ]
+  },
+  {
+   "full_name": "Tencent/QMUI_Android",
+   "draw": 603,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "google/j2objc",
+   "draw": 606,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "google/google-java-format",
+   "draw": 609,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "reactor/reactor-core",
+   "draw": 618,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "apache/calcite",
+   "draw": 642,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "liaohuqiu/android-Ultra-Pull-To-Refresh",
+   "draw": 648,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "alibaba/QLExpress",
+   "draw": 657,
+   "in": [
+    "paper one main sample (seed 2)",
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "apache/maven",
+   "draw": 672,
+   "in": [
+    "MLCQ",
+    "MLCQ (labelled URL)"
+   ]
+  },
+  {
+   "full_name": "hazelcast/hazelcast",
+   "draw": 675,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "yanzhenjie/AndPermission",
+   "draw": 681,
+   "in": [
+    "paper one pilot (seed 1)"
+   ]
+  },
+  {
+   "full_name": "didi/KnowStreaming",
+   "draw": 696,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "apple/pkl",
+   "draw": 714,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "karatelabs/karate",
+   "draw": 726,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  },
+  {
+   "full_name": "MyCATApache/Mycat-Server",
+   "draw": 729,
+   "in": [
+    "paper one Java supplement (seed 2)"
+   ]
+  }
+ ],
+ "excluded_before_last": 59,
+ "rule": "the first n usable repositories in the sampler's draw order that appear in no exclusion list",
+ "measured_sha256": "3af5e2640025ef67b9a9177fd0aa6a6f761c476a5d6964e751395fbe6f7894af"
+}
