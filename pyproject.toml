@@ -21,7 +21,7 @@ keywords = ["code-quality", "complexity", "coupling", "god-class", "code-smell",
 dependencies = [
     "complexity-concentration-study @ git+https://github.com/officefloor/complexity-concentration-study@0f8e654bddae7bc0d4536f87a043375b8edcc271",
     "lizard==1.23.0",
-    "open-source-repository-sampler==0.2.0",
+    "open-source-repository-sampler==0.2.1",
     "numpy==2.5.3",
 ]
 
