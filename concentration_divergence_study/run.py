@@ -1,5 +1,6 @@
 """Measure every usable repository of a sample (open-source-repository-sampler's run loop: each
-one shallow-cloned at its pinned commit, measured, the clone deleted) into results/<set>/.
+one shallow-cloned at its pinned commit, measured, the clone deleted) into results/<set>/. Only
+the files a measurement reads are downloaded (files.CLONE_ONLY).
 
 Resumable: a re-run with the same --out-dir skips what the run log records as done and retries
 what failed. It refuses to resume into a directory measured from a different sample, or whose
@@ -15,7 +16,7 @@ import platform
 
 from complexity_concentration_study import study as p1
 
-from . import __version__, javaparser, measure, pins, records
+from . import __version__, files, javaparser, measure, pins, records
 
 
 class PreflightFailed(RuntimeError):
@@ -152,7 +153,8 @@ def run(sample_csv: str, out_dir: str, set_name: str, pmd: str | None, ck: str |
     work = os.path.join(out_dir, ".work")
     os.makedirs(work, exist_ok=True)
     use_disk_temp(out_dir)
-    for_each(sample_csv, experiment, deep=False, run_log=log_path, work_dir=work)
+    for_each(sample_csv, experiment, deep=False, run_log=log_path, work_dir=work,
+             only=files.CLONE_ONLY)
     out = list(rows.values())
     print(f"\n{len(out)} repositories recorded in {rows_path}", flush=True)
     return out

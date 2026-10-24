@@ -14,13 +14,14 @@ keywords = ["code-quality", "complexity", "coupling", "god-class", "code-smell",
 # PINNED. Complexity is paper one's extractor at its released commit (PLAN.md, Units and
 # measures), so every baseline number is the number paper one would produce on the same unit:
 # the package is installed from that exact commit, and preflight refuses any other
-# (concentration_divergence_study/pins.py). The sampler is the one paper one used. numpy only
+# (concentration_divergence_study/pins.py). The sampler is the one paper one used, at 0.2 for
+# its clone filter (files.CLONE_ONLY: only the files a measurement reads are downloaded). numpy only
 # speeds up the outlier rules; tests/test_rules.py checks the fast rules flag exactly what paper
 # one's own rules flag.
 dependencies = [
-    "complexity-concentration-study @ git+https://github.com/officefloor/complexity-concentration-study@393da766e5630ab05478a9b1ce896e3626741b09",
+    "complexity-concentration-study @ git+https://github.com/officefloor/complexity-concentration-study@0f8e654bddae7bc0d4536f87a043375b8edcc271",
     "lizard==1.23.0",
-    "open-source-repository-sampler==0.1.0",
+    "open-source-repository-sampler==0.2.0",
     "numpy==2.5.3",
 ]
 

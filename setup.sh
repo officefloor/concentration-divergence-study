@@ -16,6 +16,9 @@ echo "[1/5] creating .venv"
 "$PYTHON" -m venv .venv
 echo "[2/5] installing pinned Python dependencies (paper one's package from its pinned commit)"
 .venv/bin/pip install --quiet --upgrade pip
+# A re-pin keeps paper one's version number, so pip would keep an existing install of another
+# commit: uninstall it, and the install below takes the pinned commit.
+.venv/bin/pip uninstall --quiet -y complexity-concentration-study 2>/dev/null || true
 .venv/bin/pip install --quiet -e '.[test]'
 echo "[3/5] downloading PMD + CK into ./lib (verified by sha256)"
 .venv/bin/python -m concentration_divergence_study.cli deps

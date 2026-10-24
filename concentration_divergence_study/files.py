@@ -15,12 +15,16 @@ unchanged. What was deleted is counted per segment and listed, and labels on del
 counted as out of scope (measure.py).
 
 Also here: which dependency-injection frameworks a repository declares in its build files, for
-the plan's sensitivity (Diagnostics, Calls static parsing cannot see).
+the plan's sensitivity (Diagnostics, Calls static parsing cannot see); and which files a clone
+downloads at all (CLONE_ONLY).
 """
 from __future__ import annotations
 
 import os
 import re
+
+from complexity_concentration_study import extract as p1_extract
+from complexity_concentration_study import study as p1
 
 from . import pins
 
@@ -90,6 +94,14 @@ DI_PATTERNS = {
     "quarkus": re.compile(r"io\.quarkus"),
 }
 BUILD_FILES = ("pom.xml", "build.gradle", "build.gradle.kts")
+
+# What each clone downloads (the sampler's `only`): every file any measurement reads, so the rest
+# of a repository (images, jars, docs, resources) is never fetched. Paper one's source extensions
+# (its extractor lists no other file, and PMD, CK and the measurer are given only those), the
+# build files di_frameworks reads, and the deploy descriptors paper one's application/library
+# heuristic looks for by name (study.classify_kind). Taken from paper one's own constants, so
+# they cannot drift apart. A file kept is byte-identical to a full clone's: no measure changes.
+CLONE_ONLY = sorted(p1_extract.SOURCE_EXTS) + list(BUILD_FILES) + list(p1._APP_FILES)
 
 
 def di_frameworks(root: str) -> dict:

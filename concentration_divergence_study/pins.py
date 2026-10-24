@@ -13,7 +13,9 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # --- paper one: the complexity extractor, the rules, the statistics, the PMD/CK panels -------
 PAPER_ONE_URL = "https://github.com/officefloor/complexity-concentration-study"
-PAPER_ONE_COMMIT = "393da766e5630ab05478a9b1ce896e3626741b09"
+# 0f8e654 differs from 393da76 (the commit the first MLCQ rows were measured with) only in its
+# pyproject, which allows sampler 0.2 for its clone filter: paper one's code is byte-identical.
+PAPER_ONE_COMMIT = "0f8e654bddae7bc0d4536f87a043375b8edcc271"
 
 # --- the coupling measurer ---------------------------------------------------------------------
 JAVAPARSER_VERSION = "3.28.2"              # measurer/pom.xml, javaparser.version
