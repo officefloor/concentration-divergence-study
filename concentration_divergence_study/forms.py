@@ -229,7 +229,7 @@ class Grouper:
 
     def __init__(self, method_files, class_ids):
         pos = {f: j for j, f in enumerate(class_ids)}
-        self.idx = np.array([pos.get(f, -1) for f in method_files])
+        self.idx = np.array([pos.get(f, -1) for f in method_files], dtype=np.intp)
         self.n = len(class_ids)
         self.count = np.bincount(self.idx[self.idx >= 0], minlength=self.n).astype(float)
 
