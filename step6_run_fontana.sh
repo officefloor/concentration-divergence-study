@@ -20,6 +20,9 @@ cd "$(dirname "$0")"
 export PYTHONUNBUFFERED=1
 # Temporary files (clones, checkouts) on disk in the project, not in a small RAM-backed /tmp.
 export TMPDIR="$PWD/.tmp"
+# PMD with a 16 MB thread stack, as the measurer runs: on deeply nested code its default 1 MB
+# overflows, PMD stops part-way through its report, and the repository is logged failed.
+export PMD_JAVA_OPTS="${PMD_JAVA_OPTS:--Xss16m}"
 mkdir -p "$TMPDIR"
 
 PY=".venv/bin/python"
