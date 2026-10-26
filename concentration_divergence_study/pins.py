@@ -25,8 +25,9 @@ MEASURER_JAR = os.path.join(PROJECT_ROOT, "measurer", "target", "divergence-meas
 # pathological repository is bounded and the loss is counted, never silent. 8 hours (PLAN.md,
 # Amendments, 2): openjdk/jdk, the largest Java repository, spent a 1-hour budget with 22% of
 # its calls left; a repository that still spends it is kept, and the primary is also read
-# without it (analyse.py, sensitivity).
-MEASURER_HEAP = os.environ.get("CDS_MEASURER_HEAP", "6g")
+# without it (analyse.py, sensitivity). 9 GB: with 6 GB, garbage collection spent
+# OctoGramApp/OctoGram's whole budget, which 9 GB resolves in minutes (PLAN.md, Amendments, 9f).
+MEASURER_HEAP = os.environ.get("CDS_MEASURER_HEAP", "9g")
 MEASURER_BUDGET_SECONDS = 8 * 3600
 
 # --- the plan's constants (PLAN.md) ------------------------------------------------------------

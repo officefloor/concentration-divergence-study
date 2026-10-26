@@ -32,6 +32,9 @@ before step 6, which records where they came from and their hashes.
 ```
 
 Needs python3 (3.10+), git, Java 17+, Maven 3 and, for step 3, the GitHub CLI authenticated.
+The measurer runs with a 9 GB heap (`CDS_MEASURER_HEAP`, `pins.py`), so a machine of 14 GB or
+more; with less, the largest repositories can spend their time budget in garbage collection
+(PLAN.md, Amendments, 9f).
 Each script states at its head what it does and what it needs, and prints the next step.
 
 ### Run and analyse are separate
