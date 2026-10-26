@@ -243,12 +243,17 @@ def joined(rec: dict) -> dict:
 
 def _oracles_from_idx(level: Level, god_idx: dict, pos: dict, wanted) -> None:
     for name, univ in wanted:
-        if name not in god_idx:
-            continue
-        if univ is not None and univ not in god_idx:
+        # A definition scored on a universe (a human one) is attached whenever the universe is
+        # present: a repository whose reviewed units hold no positive carries the definition with
+        # no positives, its reviewed units negatives (PLAN.md, Amendments, 10). A tool definition
+        # is attached only if the tool ran.
+        if univ is not None:
+            if univ not in god_idx:
+                continue
+        elif name not in god_idx:
             continue
         p = np.zeros(level.n, bool)
-        for g in god_idx[name]:
+        for g in god_idx.get(name, ()):
             if g in pos:
                 p[pos[g]] = True
         u = None
@@ -296,8 +301,8 @@ def javaparser_set(rec: dict) -> dict:
             if u in pos:
                 a[pos[u]] = True
         return a
-    if "human_method_long_method" in jo and "human_method_long_method_reviewed" in jo:
-        ml.add_oracle("human_method_long_method", mask(jo["human_method_long_method"]),
+    if "human_method_long_method_reviewed" in jo:        # attached on the universe (Amendments, 10)
+        ml.add_oracle("human_method_long_method", mask(jo.get("human_method_long_method", ())),
                       mask(jo["human_method_long_method_reviewed"]))
     if "pmd_method_NPath200" in jo:
         ml.add_oracle("pmd_method_NPath200", mask(jo["pmd_method_NPath200"]))
@@ -325,9 +330,12 @@ def javaparser_set(rec: dict) -> dict:
         if name == "wmc47":
             cl.add_oracle(name, cl.values["cc_sum"] >= p1_extract.WMC_GOD)
             continue
-        if name not in named or (univ is not None and univ not in named):
+        if univ is not None:                                # attached on the universe (Amendments, 10)
+            if univ not in named:
+                continue
+        elif name not in named:
             continue
-        p = np.array([f in named[name] for f in files])
+        p = np.array([f in named.get(name, ()) for f in files])
         u = np.array([f in named[univ] for f in files]) if univ else None
         cl.add_oracle(name, p, u)
     _coupled_variants(ml)

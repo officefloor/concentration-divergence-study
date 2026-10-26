@@ -874,3 +874,40 @@ was made.
    error output of steps 2 to 6, which print no result; the explore-half choices of step 7
    (`a809d0a`), made by the code on the explore half as registered. The first confirmatory
    analysis was written but none of its results has been read.
+
+10. **26 October 2026: the human definitions are attached on their reviewed universe, and the
+    explore-half choices and the confirmatory analysis are made again** (Oracles and populations;
+    Procedure 4 and 5; Fixed in advance). As registered, each human definition is scored on the
+    units its reviewers reviewed, and a repository whose reviewed units hold no positive is kept,
+    its reviewed units negatives (the analysis code's own description of a population). The code
+    that attaches a definition to a repository's score required the record to name the positive
+    label as well as its `_reviewed` universe, so a repository with reviewed units and no positive
+    carried no human definition and never entered a human population. Its size: of the usable MLCQ
+    confirm repositories, 208 carry reviewed Blob classes on measured files (934 classes) and 67
+    (548 classes) entered the population; for Long Method 202 (1,033 methods) against 78 (711);
+    on the explore half, where X\* and the gate were chosen, 205 (1,072) against 81 (684); of
+    Fontana's 73 systems, 51. Every unit left out is a negative. The fix attaches a definition
+    whenever its universe is present, with no positives when the record names none; a tool
+    definition is still attached only when the tool ran (`units.py`, `tests/test_units.py`). The
+    fix has no free parameter: the population it produces is the one this plan's words define.
+
+    **Seen when amended: the confirmatory analysis of 26 October 09:49Z (`results/analysis.json`,
+    sha256 `9519e246…`) had been read in full, and its results reported to the author in a draft
+    of the paper, before the fault was found**, in the course of explaining why the populations'
+    sizes differed from the label counts. That is what distinguishes this amendment from
+    Amendment 9, and it is recorded so a reader can weigh it. Against it: the fix is required by
+    Fixed in advance whatever the results say; its target is fixed by the plan's text, so no
+    choice was open that knowledge of the results could steer; and the direction of its effect on
+    any paired difference was not known when it was made, since the units it restores are
+    negatives that either arm may flag.
+
+    What is done, in the plan's own procedure for a fault: the explore-half choices
+    (`decisions/explore-choices.json` and `measurer-validation.mlcq-explore.json`, commit
+    `a809d0a`) are set aside as `decisions/*.v1.json` and step 7 is run again on the corrected
+    scores, by the registered rules, which carry no discretion; the analysis of 09:49Z is set
+    aside as `results/analysis.v2.json` (its sha256 unchanged in `analysis-hashes.txt`) beside
+    `analysis.v1.json`, and step 8 is run again, into `results/analysis.json`, as the
+    confirmatory analysis. The paper reports that third analysis as the confirmatory analysis,
+    states what the first two were and how each differs from it, and carries the full account in
+    its ancillary data. No hypothesis, sample, measure, rule, oracle, estimand, gate rule or
+    verdict rule changes.

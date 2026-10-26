@@ -1,0 +1,10 @@
+# Build products and the extracted text; the sources and generated/ are tracked.
+main.pdf
+main.aux
+main.log
+main.out
+build.log
+abstract.txt
+arxiv.tar.gz
+main.txt
+*.png

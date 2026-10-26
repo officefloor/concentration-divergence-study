@@ -209,3 +209,20 @@ def test_and_form_is_the_intersection_of_the_two_flag_sets():
     rg = analyse._regions(cx, cd, ca)
     assert rg["X_only"][1:3].tolist() == [2, 1] and rg["d_only"][1:3].tolist() == [1, 0]
     assert rg["either"][1:3].tolist() == [5, 2] and rg["either"][3] == 3
+
+
+def test_human_oracle_attached_without_positives():
+    """Amendments, 10: a repository whose reviewed units hold no positive still carries the human
+    definition, with no positives, in both result sets and at both levels; a tool definition
+    is still attached only when the tool ran."""
+    rec = record()
+    rec["units"]["class"]["god_idx"] = {"wmc47": [], "human_blob_reviewed": [0, 1]}
+    rec["units"]["method"]["god_idx"] = {"human_method_long_method_reviewed": [0, 4]}
+    rec["jp_oracles"] = {"human_method_long_method_reviewed": [f"{'src/a/A.java'}::run@3"]}
+    for name, built in (("joined", units.joined(rec)), ("javaparser", units.javaparser_set(rec))):
+        pos, univ = built["class"].oracles["human_blob"]
+        assert not pos.any() and univ.sum() == 2, name
+        pos, univ = built["method"].oracles["human_method_long_method"]
+        assert not pos.any() and univ.any(), name
+        assert "pmd_GodClass" not in built["class"].oracles, name
+        assert "pmd_method_NPath200" not in built["method"].oracles, name

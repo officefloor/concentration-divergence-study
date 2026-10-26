@@ -66,6 +66,9 @@ The plan's order is enforced by the code, not by discipline:
 - Step 8 refuses to run until `decisions/explore-choices.json` is committed and unchanged, and
   writes `results/analysis.json` once (with its sha256); any later analysis is
   `analysis.exploratory.<utc>.json`. `./record_hashes.sh` writes `analysis-hashes.txt`; commit it.
+- A fault in the harness is fixed in the code and the steps re-run (PLAN.md, Fixed in advance);
+  what the fault set aside is kept beside the re-run, never deleted: `results/analysis.v*.json`
+  and `decisions/*.v1.json` (PLAN.md, Amendments, 9 and 10), each still hashed.
 
 ## The design in code
 

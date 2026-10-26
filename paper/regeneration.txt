@@ -1,0 +1,67 @@
+How to regenerate every number in the paper
+  "Does coupling divergence tell a god unit from a complex algorithm?"
+
+Every number the paper prints is produced by one script, paper/scripts/tables.py (in the harness
+repository, https://github.com/officefloor/concentration-divergence-study; not part of this
+ancillary bundle), from the harness's confirmatory analysis file (anc/analysis/analysis.json),
+the set-aside first analysis (anc/analysis/analysis.v1.json), the explore-half decisions
+(anc/decisions/), each set's validation record (anc/<set>/validation.json), the MLCQ rows
+(anc/mlcq/study.json), the label and sample summaries, and analysis-hashes.txt. No number the
+study computes is typed by hand (literature constants and the plan's own constants are the
+exceptions): main.tex quotes macros from generated/numbers.tex and includes tables from
+generated/tab_*.tex, both written by that script. If the script's output ever disagrees with
+the prose, the script is the authority.
+
+ENVIRONMENT
+  The harness's virtualenv (../.venv, from ../step1_setup.sh) runs the script; it imports the
+  harness only for the optional count of the reviewed units the human populations leave out
+  (Section 6), which needs results/<set>/scores/*.npz. Without them the script still writes
+  every other macro and prints a note. pdflatex (TeX Live) builds the PDF.
+
+ALL AT ONCE (from the repository root)
+  .venv/bin/python paper/scripts/tables.py     # generated/numbers.tex and generated/tab_*.tex
+  cd paper && ./build.sh                       # main.pdf, abstract.txt, arxiv.tar.gz
+
+TABLES (generated/), in the order the paper places them
+  Table 1  tab_primary               primary/joined: arms, decomposition, size_null,
+                                     with_constructors; secondary/joined/other_arms (X*.O_flow)
+  Table 2  tab_leaf                  leaf/joined; secondary/joined/method/leaf;
+                                     secondary/joined/fontana/leaf
+  Table 3  tab_cells_human           consistency/joined/cells, human oracles, flow
+  Table 4  tab_cells_tool            consistency/joined/cells, tool and internal oracles, flow
+  Table 5  tab_other_arms            secondary/joined/other_arms
+  Table 6  tab_method                secondary/joined/method
+  Table 7  tab_tool_oracles          secondary/joined/tool_oracles (+ _with_constructors)
+  Table 8  tab_friedman              secondary/joined/matrix/<oracle>/friedman, flow
+  Table 9  tab_intersection          exploratory_intersection/joined
+  Also written, not placed: tab_xstar_class, tab_xstar_method (decisions/explore-choices.json),
+  tab_between_definitions (consistency/joined/between_definitions).
+
+INLINE NUMBERS (generated/numbers.tex, about 800 macros)
+  prim*        primary/joined and primary/javaparser (micro, macro, arms, AUC, gate, verdict,
+               decomposition, size null, with constructors, mechanism)
+  leaf*        leaf/joined (flow, non-private) and the method and Fontana leaf diagnostics
+  cons*, pOne*, pTwo*, pThree*, pFour*, cell*, cells*, between*
+               consistency/joined (predictions, verdict, cells, between definitions) and
+               consistency/javaparser
+  sec*, rho*, tertile*, meth*, tool*, fontana*, fried*, matrix*
+               secondary/joined (other_arms, independence, tertiles, method, tool_oracles,
+               fontana, matrix) and the JavaParser-set counterparts named *Jp*
+  sens*        sensitivity/joined and sensitivity/javaparser
+  inter*       exploratory_intersection/joined
+  join*, calls*, role*, throwNew*, di*, pruned*, files*, scale*, zero*, uncoupled*, labels*,
+  agree*, pmdCog*, mlcq*, seedThree*, fontana*, validation*
+               diagnostics/<set>, results/<set>/validation.json,
+               decisions/measurer-validation.mlcq-explore.json, labels/mlcq-summary.json,
+               sample/seed3-measured.json, results/mlcq/study.json
+  xClass*, xMethod*, gate*
+               decisions/explore-choices.json
+  *VOne*       results/analysis.v1.json (how the set-aside analysis differs)
+  left*        the reviewed units the human populations leave out, from the score files
+               through core.Population (Section 6)
+
+CONSTANTS TYPED BY HAND
+  The outlier rule's 3.5, the gate's target half-width 0.10 and floor 20, the bootstrap's 2000
+  and 12345 (also read from the analysis file), the literature's 0.51 and 0.81 (Madeyski and
+  Lewowski 2023), the method count's 47 (WMC), Fontana's 420 and 140 instances, and the
+  measurer's 8-hour budget and 9 GB heap.
