@@ -1,7 +1,9 @@
 # sha256 of the analyses and of what they rest on. Written by ./record_hashes.sh; never
 # edited by hand. results/analysis.json is the confirmatory analysis (PLAN.md, Fixed in
-# advance); analysis.exploratory.*.json are later re-analyses.
-d64d4c8d547fa3993553927fc91dc4b7455c4f0f39fed70103addef119ba3a80  results/analysis.json
+# advance); analysis.v*.json were set aside by an amendment (PLAN.md, Amendments, 9);
+# analysis.exploratory.*.json are later re-analyses.
+9519e2466f44c567e7f22e3fab49efce8edcad8ac2ee63f92a1f9b34e100fa3b  results/analysis.json
+d64d4c8d547fa3993553927fc91dc4b7455c4f0f39fed70103addef119ba3a80  results/analysis.v1.json
 67ca4932f8f9eaf2ba6d7c1cff29c639ff33106749ee6b61849eceb9f3027bb8  decisions/explore-choices.json
 6beebf62522c73f656bc350135669c7c98c5b2a737bf078f166ebfe4ac166986  decisions/measurer-validation.mlcq-explore.json
 8e05db55150a984f0b08ab211f5f612374790ea918ba08afc290cf122b63551b  labels/MLCQCodeSmellSamples.csv
@@ -12,16 +14,16 @@ fbaad4e76e37afb259c7f1d40b826f4b42f462a30c74c84c35de5947f1e8642a  labels/mlcq-la
 8234d78f7c9c022ac88e95ae7f5e12b7f22bfd6587393435cd8aaf7cf0d4f2b3  labels/mlcq-frame.json
 95e6177c05185b6b88e2237b9ddf353cc7ed234eeb184d50ae35798e7ce85749  labels/mlcq-summary.json
 2f546eaa6e8210e97e2df901202ac3c8ecb19c28484c3615c5ff94322bcb8b20  labels/fontana-labels.csv
-07e1507276507732a0b8831fd1a999b1d9e878b08f34d09faa42367041d66f63  labels/fontana-systems.csv
+ca3aec01026d53139fddf85c64994f8fc30f66d944f177ae099c1bece46e0aa3  labels/fontana-systems.csv
 6c725798c5cd78e90e5004218049aa1115b43649bfa34d3157dbe59693d7f1ee  sample/open-source-repository-sample.seed3.csv
 800370f7c8541fd62f492353fdb5749102f6adefcbf82b2c4cc8835e409d49cf  sample/open-source-repository-sample.seed3.derivation.json
 3af5e2640025ef67b9a9177fd0aa6a6f761c476a5d6964e751395fbe6f7894af  sample/seed3-measured.csv
 9d64b7a558eb2fc51d5a0a037896e955f7913658a7d214fbb09c87db4e1f27f5  sample/seed3-measured.json
-20f73a481469261a3e81a15170e574145357355742a552d90146bcc08c9b0786  results/fontana/run.json
+b70709eeaec4ab55b185c3a38d5c98a6225006b524f82773227b4f60c83fc837  results/fontana/run.json
 44404114d0a4d86829380237c9129d38da96c0c5618d0aa810bef174ecead461  results/mlcq/run.json
 264e6ce0ee0aeaeba34935ef24c5caf53daf394a5369c06a07491a1b8ffc0a4a  results/seed3/run.json
 1810a4fe8986e4c2a6c4c91bf624f034a9658495967554df4d60cd064c803592  results/validation/run.json
-d82f4d1bd93061781c961d0cb26c86a4acf2c046bf15ff696702b6d287451209  results/fontana/validation.json
+549425a4a3ca80bbfd0043ab39bb33721608510580546ebdd5a3645f0185f312  results/fontana/validation.json
 48539bee93f995ef352960f02e89b879754ec2aef605ca57d5696686dd648be3  results/mlcq/validation.json
 bf4b8efdaf08457c69c1fd606679cee4ca5c39239e959fe3a81e7f42c6606f9b  results/seed3/validation.json
 9407ccf6ebf07b10c68bdfdb44beaddfe3255dd6495448f971f3c02eb84f087b  results/validation/validation.json
