@@ -1,11 +1,15 @@
 # sha256 of the analyses and of what they rest on. Written by ./record_hashes.sh; never
 # edited by hand. results/analysis.json is the confirmatory analysis (PLAN.md, Fixed in
-# advance); analysis.v*.json were set aside by an amendment (PLAN.md, Amendments, 9);
+# advance); analysis.v*.json and decisions/*.v1.json were set aside by an amendment (PLAN.md,
+# Amendments, 9 and 10);
 # analysis.exploratory.*.json are later re-analyses.
-9519e2466f44c567e7f22e3fab49efce8edcad8ac2ee63f92a1f9b34e100fa3b  results/analysis.json
+9aa901ddc12b9c35e9e9aa5389ed4ae84d265ae094bf4f9f80c290ff5e6da516  results/analysis.json
 d64d4c8d547fa3993553927fc91dc4b7455c4f0f39fed70103addef119ba3a80  results/analysis.v1.json
-67ca4932f8f9eaf2ba6d7c1cff29c639ff33106749ee6b61849eceb9f3027bb8  decisions/explore-choices.json
+9519e2466f44c567e7f22e3fab49efce8edcad8ac2ee63f92a1f9b34e100fa3b  results/analysis.v2.json
+ace77d5bb5eb36508a7d8dd59f72b01c18d9c2b207e2ea458ade16d966cf4b0d  decisions/explore-choices.json
+67ca4932f8f9eaf2ba6d7c1cff29c639ff33106749ee6b61849eceb9f3027bb8  decisions/explore-choices.v1.json
 6beebf62522c73f656bc350135669c7c98c5b2a737bf078f166ebfe4ac166986  decisions/measurer-validation.mlcq-explore.json
+6beebf62522c73f656bc350135669c7c98c5b2a737bf078f166ebfe4ac166986  decisions/measurer-validation.mlcq-explore.v1.json
 8e05db55150a984f0b08ab211f5f612374790ea918ba08afc290cf122b63551b  labels/MLCQCodeSmellSamples.csv
 b7f3e3beb32a6fd9c4aa1be6944fa42f34a06d8870cc3e222a81cc5cd8222bb9  labels/mlcq-labels.csv
 fbaad4e76e37afb259c7f1d40b826f4b42f462a30c74c84c35de5947f1e8642a  labels/mlcq-labels.mapped.csv
