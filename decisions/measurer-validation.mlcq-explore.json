@@ -1,0 +1,246 @@
+{
+ "results": "/home/daniel/concentration-divergence-study/results/mlcq",
+ "halves": [
+  "explore"
+ ],
+ "repositories": 261,
+ "join": {
+  "lizard_units": 2314529,
+  "joined": 2300063,
+  "ambiguous": 0,
+  "measurer_units": 2343334,
+  "measurer_not_joined": 43273,
+  "class_units": 222007,
+  "class_coupled": 221269,
+  "joined_share": 0.9937499162896641,
+  "measurer_not_joined_share": 0.018466424333876436
+ },
+ "agreement": {
+  "cc": {
+   "n": 2300061,
+   "exact": 0.9970631213693898,
+   "spearman_pooled": 0.9966663480616841,
+   "spearman_within": {
+    "median": 0.9984350203558994,
+    "q1": 0.9949921174426474,
+    "q3": 0.9998994896741699,
+    "n": 261
+   }
+  },
+  "cognitive": {
+   "n": 2300061,
+   "exact": 0.9461418631940631,
+   "spearman_pooled": 0.9590043724435834,
+   "spearman_within": {
+    "median": 0.9723607951862656,
+    "q1": 0.9418739691237636,
+    "q3": 0.9873075383751345,
+    "n": 261
+   }
+  },
+  "nloc": {
+   "n": 2300061,
+   "exact": 0.9833078340096197,
+   "spearman_pooled": 0.9977046278441575,
+   "spearman_within": {
+    "median": 0.9987192514840417,
+    "q1": 0.9972589737671422,
+    "q3": 0.9995688915039298,
+    "n": 261
+   }
+  },
+  "tokens": {
+   "n": 2300061,
+   "exact": 0.9462427300841152,
+   "spearman_pooled": 0.9980528841690707,
+   "spearman_within": {
+    "median": 0.9989068220573197,
+    "q1": 0.997429067917997,
+    "q3": 0.999661536782954,
+    "n": 261
+   }
+  },
+  "params": {
+   "n": 2300061,
+   "exact": 0.9988230746923669,
+   "spearman_pooled": 0.9990388029120669,
+   "spearman_within": {
+    "median": 1.0,
+    "q1": 0.9994931169014314,
+    "q3": 1.0,
+    "n": 261
+   }
+  },
+  "nesting": {
+   "n": 2300061,
+   "exact": 0.9334069835539145,
+   "spearman_pooled": 0.9113357699963244,
+   "spearman_within": {
+    "median": 0.9386132005116123,
+    "q1": 0.8849222153995565,
+    "q3": 0.9657242711703357,
+    "n": 261
+   }
+  },
+  "cyc_density": {
+   "n": 2300061,
+   "exact": 0.9831578379877751,
+   "spearman_pooled": 0.9974688293352302,
+   "spearman_within": {
+    "median": 0.9983805212018385,
+    "q1": 0.9965592830257639,
+    "q3": 0.9995186389969752,
+    "n": 261
+   }
+  },
+  "exit_points": {
+   "n": 2300061,
+   "exact": 0.9905563374188772,
+   "spearman_pooled": 0.9891482895468797,
+   "spearman_within": {
+    "median": 0.9935061044299222,
+    "q1": 0.9881860738377126,
+    "q3": 0.9973668053174349,
+    "n": 261
+   }
+  },
+  "hvol": {
+   "n": 2300061,
+   "exact": 0.014745695875022445,
+   "spearman_pooled": 0.9900501206076008,
+   "spearman_within": {
+    "median": 0.9903720363521801,
+    "q1": 0.9864540967285729,
+    "q3": 0.9931410916080519,
+    "n": 261
+   }
+  },
+  "mi": {
+   "n": 2300061,
+   "exact": 0.015242639216959898,
+   "spearman_pooled": 0.9946832327612517,
+   "spearman_within": {
+    "median": 0.9937810436998076,
+    "q1": 0.9914084058833907,
+    "q3": 0.9956752509406934,
+    "n": 261
+   }
+  }
+ },
+ "calls": {
+  "total": {
+   "unresolved": 2167268,
+   "jdk": 2745306,
+   "internal": 4309669,
+   "should_have_resolved": 694209,
+   "repo_not_analysed": 56509
+  },
+  "share_total": {
+   "unresolved": 0.21731439639641628,
+   "jdk": 0.27527491584495317,
+   "internal": 0.4321353507749604,
+   "should_have_resolved": 0.06960911608899303,
+   "repo_not_analysed": 0.005666220894677118
+  },
+  "share_per_repository": {
+   "internal": {
+    "median": 0.34776615761606794,
+    "q1": 0.22182881773399016,
+    "q3": 0.4884313951478131,
+    "n": 261
+   },
+   "jdk": {
+    "median": 0.25908644961098815,
+    "q1": 0.19501135933358577,
+    "q3": 0.34606828964766273,
+    "n": 261
+   },
+   "repo_not_analysed": {
+    "median": 0.0,
+    "q1": 0.0,
+    "q3": 0.0,
+    "n": 261
+   },
+   "unresolved": {
+    "median": 0.2687911792389404,
+    "q1": 0.1301204248056135,
+    "q3": 0.4105812220566319,
+    "n": 261
+   },
+   "should_have_resolved": {
+    "median": 0.06823351023502654,
+    "q1": 0.036073534512660425,
+    "q3": 0.10689588935843258,
+    "n": 261
+   },
+   "budget": {
+    "median": 0.0,
+    "q1": 0.0,
+    "q3": 0.0,
+    "n": 261
+   }
+  }
+ },
+ "pmd_cognitive_spearman": {
+  "paper_one": {
+   "median": 0.9818482890237445,
+   "q1": 0.9650551460923552,
+   "q3": 0.9901125795793208,
+   "n": 261
+  },
+  "measurer": {
+   "median": 0.9716201274445467,
+   "q1": 0.941692694798004,
+   "q3": 0.988660374944602,
+   "n": 261
+  }
+ },
+ "files": {
+  "files": 270140,
+  "failed": 1119,
+  "java8_fallback": 10,
+  "budget_exhausted_repositories": 0
+ },
+ "pruned_by_segment": {
+  "androidTest": 63,
+  "build": 50,
+  "target": 12,
+  "bin": 1,
+  "generated": 7,
+  "integrationTest": 902,
+  "out": 844
+ },
+ "di": {
+  "(repositories)": 261,
+  "guice": 39,
+  "cdi": 23,
+  "spring": 93,
+  "dagger": 5
+ },
+ "labels": {
+  "blob": {
+   "labelled": 142,
+   "measured": 133,
+   "on_deleted_files": 1
+  },
+  "blob_reviewed": {
+   "labelled": 1225,
+   "measured": 1074,
+   "on_deleted_files": 2
+  },
+  "long_method@method": {
+   "labelled": 142,
+   "measured": 134
+  },
+  "long_method_reviewed@method": {
+   "labelled": 1258,
+   "measured": 1170
+  },
+  "long_method": {
+   "on_deleted_files": 0
+  },
+  "long_method_reviewed": {
+   "on_deleted_files": 1
+  }
+ }
+}
