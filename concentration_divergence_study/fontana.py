@@ -20,7 +20,9 @@ The fetch script also writes ACCESS.md and SHA256SUMS, from the pages as they re
     cds fontana-prepare [--dataset ...] [--corpus ...]
         labels/fontana-labels.csv   system, class (qualified), label: `fontana_god_class` for a
                                     positive, `fontana_god_class_reviewed` for every instance
-        labels/fontana-systems.csv  system, archive (relative to the project), its sha256
+        labels/fontana-systems.csv  system, archive (relative to the project; `outer!inner` for
+                                    an archive nested in another, `;` between several), its
+                                    sha256
     cds study --set fontana         measure each system's archive (unpacked to a temporary
                                     directory) in place of a pinned commit, its sha256 recorded
                                     as the commit (`archive:<sha256>`)
@@ -34,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import io
 import json
 import os
 import re
@@ -52,7 +55,7 @@ ACCESS = os.path.join(DIR, "ACCESS.md")
 LABELS_CSV = os.path.join(pins.LABELS, "fontana-labels.csv")
 SYSTEMS_CSV = os.path.join(pins.LABELS, "fontana-systems.csv")
 LABEL = "fontana_god_class"
-ARCHIVE_EXT = (".zip", ".tar.gz", ".tgz", ".tar", ".tar.bz2")
+ARCHIVE_EXT = (".zip", ".jar", ".tar.gz", ".tgz", ".tar", ".tar.bz2")
 
 
 def read_arff(path: str) -> tuple[list[str], list[list[str]]]:
@@ -104,19 +107,66 @@ def instances(path: str, system_col: str, package_col: str, class_col: str, labe
     return out
 
 
-def find_archive(corpus: str, system: str) -> str | None:
-    """The source archive (or source directory) of one system in the corpus: a file whose name
-    starts with the system's name and names its sources (`...src...`), else a directory named
-    after the system. The shortest such path wins, so a system's own archive beats a nested one."""
-    hits = []
-    for dirpath, dirnames, filenames in os.walk(corpus):
-        for fn in filenames:
-            if fn.startswith(system) and "src" in fn.lower() and fn.lower().endswith(ARCHIVE_EXT):
-                hits.append(os.path.join(dirpath, fn))
-        for d in dirnames:
-            if d == system:
-                hits.append(os.path.join(dirpath, d))
-    return min(hits, key=lambda p: (os.path.isdir(p), len(p))) if hits else None
+def _entries(src, name: str) -> list:
+    """[(entry name, loader of its bytes)] of the files in a zip, jar or tar archive; `src` is a
+    path or a file object."""
+    if name.lower().endswith((".zip", ".jar")):
+        z = zipfile.ZipFile(src)
+        return [(i.filename, lambda z=z, i=i: z.read(i)) for i in z.infolist() if not i.is_dir()]
+    t = tarfile.open(src) if isinstance(src, str) else tarfile.open(fileobj=src)
+    return [(m.name, lambda t=t, m=m: t.extractfile(m).read()) for m in t.getmembers() if m.isfile()]
+
+
+def _java_count(src, name: str) -> int:
+    return sum(e.endswith(".java") for e, _ in _entries(src, name))
+
+
+def find_archive(corpus: str, system: str) -> list[str] | None:
+    """The source of one system in the corpus, as archive members: `path` for an archive, or
+    `path!inner` for an archive nested in it. The corpus keeps each system version in a
+    directory named after it (the shortest such path), its sources only in `compressed/`, under
+    names that follow no one pattern (`aoisrc281.zip`, `junit-4.10-src.jar`, `src.jar`) and
+    sometimes one archive inside another (weka's `weka-src.jar` in `weka-3-7-5.zip`). So the
+    source is the archive in `compressed/`, or nested one level in one there, holding the most
+    `.java` files, a top-level archive winning a tie. A system shipped as several `*-sources.jar`
+    modules named after it in one archive (jung's `jung-api-2.0.1-sources.jar`, ...) is all of
+    them; a dependency's sources beside them (jena's `iri-0.8-sources.jar`) are not. None if no
+    archive there holds a `.java` file."""
+    prefix = system.split("-")[0].lower()
+    dirs = [os.path.join(dp, d) for dp, dn, _ in os.walk(corpus) for d in dn if d == system]
+    if not dirs:
+        return None
+    comp = os.path.join(min(dirs, key=len), "compressed")
+    if not os.path.isdir(comp):
+        return None
+    cands = []                                         # (java files, nested, members)
+    for fn in sorted(os.listdir(comp)):
+        path = os.path.join(comp, fn)
+        if not fn.lower().endswith(ARCHIVE_EXT):
+            continue
+        try:
+            es = _entries(path, fn)
+        except (OSError, zipfile.BadZipFile, tarfile.TarError):
+            continue
+        cands.append((sum(e.endswith(".java") for e, _ in es), 0, [path]))
+        modules = []
+        for e, load in es:
+            if not e.lower().endswith(ARCHIVE_EXT):
+                continue
+            try:
+                n = _java_count(io.BytesIO(load()), e)
+            except (OSError, zipfile.BadZipFile, tarfile.TarError, EOFError):
+                continue
+            cands.append((n, 1, [f"{path}!{e}"]))
+            base = os.path.basename(e).lower()
+            if base.endswith("-sources.jar") and base.startswith(prefix) and n:
+                modules.append((n, e))
+        if len(modules) > 1:
+            cands.append((sum(n for n, _ in modules), 1, [f"{path}!{e}" for _, e in modules]))
+    if not cands:
+        return None
+    n, _, members = max(cands, key=lambda c: (c[0], -c[1]))
+    return members if n else None
 
 
 def tree_sha256(path: str) -> str:
@@ -129,6 +179,20 @@ def tree_sha256(path: str) -> str:
         for fn in sorted(filenames):
             p = os.path.join(dirpath, fn)
             h.update(os.path.relpath(p, path).encode() + b"\0" + records.sha256(p).encode())
+    return h.hexdigest()
+
+
+def source_sha256(members: list[str]) -> str:
+    """The sha256 of a system's source: of its archive, when that is one top-level archive (as
+    recorded before nested members were read), else over every member's archive and name."""
+    if len(members) == 1 and "!" not in members[0]:
+        return tree_sha256(members[0])
+    import hashlib
+    h = hashlib.sha256()
+    for m in members:
+        path, _, inner = m.partition("!")
+        h.update(f"{os.path.relpath(path, pins.PROJECT_ROOT)}!{inner}".encode() + b"\0"
+                 + tree_sha256(path).encode() + b"\n")
     return h.hexdigest()
 
 
@@ -156,21 +220,35 @@ def prepare(dataset: str, corpus: str, cols: dict) -> dict:
             if a is None:
                 missing.append(s)
                 continue
-            w.writerow([s, os.path.relpath(a, pins.PROJECT_ROOT), tree_sha256(a)])
+            w.writerow([s, ";".join(os.path.relpath(m, pins.PROJECT_ROOT) for m in a),
+                        source_sha256(a)])
     return {"instances": len(inst), "positives": sum(i["positive"] for i in inst),
             "systems": len(systems), "systems_without_archive": missing,
             "dataset_sha256": records.sha256(dataset)}
 
 
-def unpack(src: str, dest: str) -> None:
-    if os.path.isdir(src):
-        shutil.copytree(src, dest, symlinks=False, dirs_exist_ok=True)
-    elif src.lower().endswith(".zip"):
+def _extract(src, name: str, dest: str) -> None:
+    if name.lower().endswith((".zip", ".jar")):
         with zipfile.ZipFile(src) as z:
             z.extractall(dest)
     else:
-        with tarfile.open(src) as t:
+        with (tarfile.open(src) if isinstance(src, str) else tarfile.open(fileobj=src)) as t:
             t.extractall(dest, filter="data")
+
+
+def unpack(members: list[str], dest: str) -> None:
+    """Unpack a system's source members (see find_archive) into dest; several members each into
+    their own directory, so files of the same name do not collide."""
+    for m in members:
+        path, _, inner = m.partition("!")
+        d = dest if len(members) == 1 else os.path.join(dest, os.path.basename(inner or path))
+        if os.path.isdir(path):
+            shutil.copytree(path, d, symlinks=False, dirs_exist_ok=True)
+        elif not inner:
+            _extract(path, path, d)
+        else:
+            load = dict(_entries(path, path))[inner]
+            _extract(io.BytesIO(load()), inner, d)
 
 
 _PKG = re.compile(r"(?m)^\s*package\s+([\w.]+)\s*;")
@@ -240,9 +318,10 @@ def run(out_dir: str, pmd: str, ck: str, allow_dirty: bool = False) -> None:
         if key in rows:
             print(f"[{i}/{len(systems)}] {s['system']}: done, skipped", flush=True)
             continue
-        src = os.path.join(pins.PROJECT_ROOT, s["archive"])
-        if tree_sha256(src) != s["sha256"]:
-            raise RuntimeError(f"{src} does not match its recorded sha256; re-run fontana-prepare")
+        src = [os.path.join(pins.PROJECT_ROOT, m) for m in s["archive"].split(";")]
+        if source_sha256(src) != s["sha256"]:
+            raise RuntimeError(f"{s['archive']} does not match its recorded sha256; re-run "
+                               f"fontana-prepare")
         os.makedirs(os.path.join(out_dir, ".work"), exist_ok=True)
         work = tempfile.mkdtemp(prefix="cds-fontana-", dir=os.path.join(out_dir, ".work"))
         try:
