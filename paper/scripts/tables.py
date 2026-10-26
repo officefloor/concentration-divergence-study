@@ -116,8 +116,9 @@ def cmp_row(c: dict, label: str | None = None) -> str:
     """One row of a paired comparison table: y against x."""
     ax, ay = c["arms"][c["x"]], c["arms"][c["y"]]
     lab = label if label is not None else form_name(c["y"])
+    reading = c["reading"].replace("the divergence factor refines complexity", "the form refines complexity")
     return (f"{lab} & {rate(ax['mcc'])} & {rate(ay['mcc'])} & {est(c['micro'])} & "
-            f"{rate(ay['precision'])} & {rate(ay['recall'])} & {c['reading']} \\\\")
+            f"{rate(ay['precision'])} & {rate(ay['recall'])} & {reading} \\\\")
 
 
 CMP_HEAD = ("\\begin{tabular}{lrrlrrl}\n\\toprule\n"
@@ -467,6 +468,19 @@ def main() -> int:
     M("leafMethodCatchRate", pct(ml["catchment"]["positive"] / ml["catchment"]["flagged"]))
     M("leafMethodRestRate", pct(ml["rest"]["positive"] / ml["rest"]["flagged"]))
     M("leafMethodDiff", est(ml["diff"]))
+    M("leafClassUnresolved", str(sum(1 for v in L.values() if v["reading"].startswith("unresolved"))))
+    M("leafClassVariants", str(len(L)))
+    mleaf = A["secondary"]["joined"]["method"]["leaf"]
+    M("leafMethodReading", mleaf["flow"]["reading"].split(" (")[0])
+    M("leafMethodSupported", str(sum(1 for v in mleaf.values() if v["reading"].startswith("supported"))))
+    M("leafMethodVariants", str(len(mleaf)))
+    fleaf = A["secondary"]["joined"]["fontana"]["leaf"]
+    M("leafFontanaReading", fleaf["flow|np"]["reading"].split(" (")[0])
+    M("leafFontanaSupported", str(sum(1 for v in fleaf.values() if v["reading"].startswith("supported"))))
+    M("leafFontanaFlowSupported", str(sum(1 for k, v in fleaf.items() if k.startswith("flow") and v["reading"].startswith("supported"))))
+    M("leafFontanaVariants", str(len(fleaf)))
+    M("leafMethodDataDiff", est(mleaf["data"]["diff"]))
+    M("leafMethodMessageDiff", est(mleaf["message"]["diff"]))
     fl = A["secondary"]["joined"]["fontana"]["leaf"]["flow|np"]
     M("leafFontanaCatchRate", pct(fl["catchment"]["positive"] / fl["catchment"]["flagged"]))
     M("leafFontanaRestRate", pct(fl["rest"]["positive"] / fl["rest"]["flagged"]))
@@ -868,11 +882,15 @@ def main() -> int:
     M("interLongDOnlyPrecision", pct(rl["d_only"][0] / (rl["d_only"][0] + rl["d_only"][1])))
     M("interLongBothVsX", est(cl_["vs_X"]["both"]))
     M("interLongEitherVsX", est(cl_["vs_X"]["either"]))
+    M("interLongDVsX", est(cl_["vs_X"]["d"]))
+    M("interLongDMcc", rate(rl["d"][2], 3))
     cf = E["fontana"]["cells"]["flow|np"]
     rf = regions(cf)
     M("interFontanaEitherVsX", est(cf["vs_X"]["either"]))
     M("interFontanaEitherMcc", rate(rf["either"][2], 3))
     M("interFontanaBothVsX", est(cf["vs_X"]["both"]))
+    M("interFontanaBothPrecision", pct(rf["both"][0] / (rf["both"][0] + rf["both"][1])))
+    M("primJpReposWithPositive", str(PJ["n_repos_with_positive"]))
 
     # --- the analyses set aside, and what the population fix restored (ancillary DEVIATIONS) --
     def prior(path):

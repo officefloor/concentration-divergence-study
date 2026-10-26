@@ -62,33 +62,32 @@ the data a unit hands on}
 
 \begin{abstract}
 \noindent
-A unit whose complexity is a robust outlier for its own codebase is where
-the complexity concentrates, but a companion study found that such a rule
-cannot tell a god unit from a complex algorithm, a leaf that legitimately
-holds the complexity of what it computes. This paper pre-registers a test of
-one way to tell them apart: weight a unit's complexity by its \emph{coupling
-divergence}, the data it hands on minus the data it receives, so that a leaf
-that takes in more than it sends is set aside. Coupling is measured by
-resolving every call in \mlcqMeasured{} MLCQ repositories,
-\seedThreeMeasured{} fresh Java repositories and \fontanaSystems{}
-Qualitas Corpus systems; the weighted signal is scored by the same
-scale-free outlier rule as complexity alone against MLCQ's reviewers,
-Fontana's God Class and five tool definitions. The primary, the pooled MCC
-of the weighted form minus complexity alone against human Blob on the
-confirm half, is \primMicro{}: no difference resolved, and underpowered.
-Every resolved secondary goes against the construct as registered. The
-whole factor loses to each of its own halves, to a plain weighting by the
-number of methods (\primDvsNMicro{}) and to complexity alone on the
-threshold-free ranking (AUC \primAucX{} against \primAucD{}); at method level
-it makes Long Method recovery worse (\methMicro{}); and the leaf diagnostic
-that tests the exemption itself is unresolved everywhere, catchments called
-Blob at \leafCatchRate{} and the rest at \leafRestRate{}. What carries a
-signal is the outgoing side alone: multiplying complexity by the data a
-class sends out raises the MCC against human Blob in the peak and density
-families by \pOneOPeak{} and \pOneODensity{}, and subtracting what the class
-receives costs agreement in every family, so the construct's verdict, by its
-pre-registered rule, is \emph{\consVerdict}. The same holds on Fontana's
-God Class and on every tool definition at class level.
+A complexity outlier rule finds where complexity concentrates but, a
+companion study found, cannot tell a god unit from a complex algorithm, a
+leaf that legitimately holds the complexity of what it computes. This paper
+pre-registers a test of one way to tell them apart: weight a unit's
+complexity by its \emph{coupling divergence}, the data it hands on minus the
+data it receives, so that a leaf that takes in more than it sends is set
+aside. Coupling is measured by resolving every call in \mlcqMeasured{} MLCQ
+repositories, \seedThreeMeasured{} fresh Java repositories and
+\fontanaSystems{} Qualitas Corpus systems, and the weighted signal is scored
+by the same scale-free outlier rule as complexity alone against MLCQ's
+reviewers, Fontana's God Class and five tool definitions. The primary, the
+pooled MCC of the weighted form minus complexity alone against human Blob on
+the confirm half, is \primMicro{}: no difference resolved, and underpowered.
+The exemption itself holds in two human oracles of three: among the units
+complexity flags, a leaf is called Long Method less often
+(\leafMethodDiff{}) and God Class less often (\leafFontanaDiff{}), while for
+Blob the difference is unresolved. The factor built on it still does not
+help, because what it adds costs more than the exemption gains: the whole
+factor loses to the exemption alone, to a plain weighting by the number of
+methods (\primDvsNMicro{}) and to complexity alone on the threshold-free
+ranking (AUC \primAucX{} against \primAucD{}). The outgoing side alone
+carries the signal: multiplying complexity by the data a class sends out
+raises the MCC against human Blob in the peak and density families by
+\pOneOPeak{} and \pOneODensity{}, and subtracting what the class receives
+costs agreement in every class-level family, so the construct's verdict, by
+its pre-registered rule, is \emph{\consVerdict}.
 \end{abstract}
 
 \section{Introduction}
@@ -120,12 +119,14 @@ setting complex leaves aside. The claim was committed, with its estimand,
 decision rule, sample and bootstrap, before any coupling had been measured
 on the confirmatory material.
 
-The claim did not survive the test. The primary resolves no difference and
-is underpowered; every secondary that is resolved goes against the factor
-as registered; and the exemption at the heart of the claim, that a
-catchment is less often a god unit, is not seen in the labels. One
-component of the construct does carry a signal, and it is the one the
-claim subtracted: the data a class sends out. This paper reports the
+The claim did not survive the test, though one part of it did. The primary
+resolves no difference and is underpowered, and every resolved reading of
+the whole factor goes against it. The exemption at the heart of the claim,
+that a catchment is less often a god unit, is seen in the labels at method
+level and in Fontana's God Class, and is unresolved for MLCQ's Blob; but the
+factor built on it, which also amplifies a junction by its divergence, costs
+more than the exemption gains. The component that carries a signal is the
+one the claim subtracted: the data a class sends out. This paper reports the
 numbers in the order the plan fixed, the primary first, then the
 diagnostic that tests the exemption on its own, then the consistency
 analysis across oracles and definitions that reads the construct as a
@@ -351,7 +352,8 @@ the expected loss after some class-level field initialisers. Of the
 coupling, among them every one of the \uncoupledBlobReviewed{} reviewed Blob
 classes; \uncoupledLongUncoupled{} of the \uncoupledLongReviewed{} reviewed
 Long Method units carry none, none of them positive; on Fontana
-\uncoupledFontanaUncoupled{} reviewed classes carry none, both positives.
+\uncoupledFontanaUncoupled{} reviewed classes carry none,
+\uncoupledFontanaPositiveUncoupled{} of them positives.
 On the explore half the JavaParser re-implementation of the complexity
 fields agrees with the extractor on \agreeUnits{} joined methods at exact
 matches of \agreeCcExact{} for cyclomatic complexity, \agreeNlocExact{} for
@@ -480,8 +482,9 @@ against complexity alone, but the whole factor is resolved against the
 exemption alone: \primDvsEMicro{}, \primDvsEReading{}. Against the
 amplification alone it is \primDvsAMicro{}, \primDvsAReading{} on the joined
 set and \primJpDvsAMicro{} on the JavaParser-only set, where it reads
-\primJpDvsAReading{}. Multiplying the two halves together is worse than
-either half.
+\primJpDvsAReading{}. Multiplying the two halves together does worse than
+either half on its own: resolved against the exemption on both sets, and
+against the amplification on one.
 
 \paragraph{The size null.} Weighting \Xs{} by the number of methods, which
 carries no coupling, gives \primNvsXMicro{} against \Xs{} (MCC
@@ -517,22 +520,28 @@ lower bound above 0.}
 \end{table}
 
 The exemption is the claim in the question, and this is its own test,
-reported whatever the primary says (Table~\ref{tab:leaf}). Of the
-\primXFlagged{} reviewed classes \Xs{} flags on confirm, under flow with
-non-private inputs, \leafCatchFlagged{} are catchments and
-\leafCatchPositive{} of them are Blobs, \leafCatchRate{}; of the
-\leafRestFlagged{} others, \leafRestPositive{} are Blobs, \leafRestRate{}.
-The difference is \leafDiff{}: \leafReading{}. It is unresolved under every
-definition and input variant, and its point estimate is within a tenth of
-zero in each. The same holds at method level against Long
-Method, where \leafMethodCatchPositive{} of the \leafMethodCatchFlagged{}
-flagged catchments are Long Methods (\leafMethodCatchRate{} against
-\leafMethodRestRate{} for the rest, \leafMethodDiff{}), and on Fontana's
-God Class (\leafFontanaCatchRate{} against \leafFontanaRestRate{},
-\leafFontanaDiff{}), where the point estimates lean towards support but the
-intervals reach 0. The people who labelled this code did not call a
-complex class that receives more than it sends a Blob any less often than
-one that sends more than it receives.
+reported whatever the primary says (Table~\ref{tab:leaf}). Against MLCQ Blob
+it is \leafReading{}: of the \primXFlagged{} reviewed classes \Xs{} flags on
+confirm, under flow with non-private inputs, \leafCatchFlagged{} are
+catchments and \leafCatchPositive{} of them are Blobs, \leafCatchRate{}; of
+the \leafRestFlagged{} others, \leafRestPositive{} are Blobs,
+\leafRestRate{}; the difference is \leafDiff{}, and it is unresolved in
+\leafClassUnresolved{} of the \leafClassVariants{} definition and input
+variants, every point estimate on the exemption's side. Against MLCQ Long
+Method it is \leafMethodReading{}: \leafMethodCatchPositive{} of the
+\leafMethodCatchFlagged{} flagged catchments are Long Methods,
+\leafMethodCatchRate{} against \leafMethodRestRate{} for the rest,
+\leafMethodDiff{}, and the same under data (\leafMethodDataDiff{}) and
+message (\leafMethodMessageDiff{}). Against Fontana's God Class it is
+\leafFontanaReading{} under flow: \leafFontanaCatchRate{} of the flagged
+catchments are God Classes against \leafFontanaRestRate{} of the rest,
+\leafFontanaDiff{}, supported in \leafFontanaFlowSupported{} of 4 flow variants and
+\leafFontanaSupported{} of \leafFontanaVariants{} variants in all.
+A complex unit that receives more than it sends is called a god unit less
+often by two of the three human oracles, and not detectably less often by
+the third. The exemption is a distinction the labels carry; the question the
+rest of the results answer is why the factor that rests on it does not
+improve detection.
 
 \subsection{The construct: the consistency analysis}
 \label{sec:cons}
@@ -567,13 +576,13 @@ Table~\ref{tab:cells-tool} the tool cells. The four predictions, read on
 flow:
 
 \begin{itemize}
-\item \textbf{P1 \pOneHolds.} For human Blob, \dD{} is \pOneDPeak{} in the
-  peak family and \pOneDDensity{} in density; neither lower bound is above 0.
-  For \dO{} the prediction \pOneOHolds: \pOneOPeak{} in peak and
+\item \textbf{P1 \pOneHolds.} For human Blob, \dD{} is \pOneDPeak{} in the peak family and \pOneDDensity{} in density: the density family's
+  lower bound is above 0, the peak family's is not, and the prediction asks
+  for both. For \dO{} the prediction \pOneOHolds: \pOneOPeak{} in peak and
   \pOneODensity{} in density. Multiplying complexity by the data a class
   sends out raises its agreement with the reviewers in both families where a
   single complex method makes a class an outlier; multiplying it by the
-  divergence does not.
+  divergence does so in one, by a smaller margin.
 \item \textbf{P2 \pTwoHolds.} \dD{} is larger in the peak family than in
   size for human Blob by \pTwoBlob{}, in structure than in size for Long
   Method by \pTwoLong{}, and in peak than in size for Fontana by
@@ -584,8 +593,7 @@ flow:
   \cellLongSizeD{} for Long Method and \cellFontanaSizeD{} for Fontana,
   and its upper bound is below 0 in \cellsSizeDHiBelow{} of the
   \cellsSizeFlow{} counted size cells. On the JavaParser-only set the Blob
-  contrast is \pTwoJpBlob{} and P2 \pTwoJpHolds{} there, the one reading of
-  the analysis the two sets do not share.
+  contrast is \pTwoJpBlob{} and P2 \pTwoJpHolds{}.
 \item \textbf{P3 reads \pThreeReads.} \dDO{} for human Blob is
   \pThreeSize{} in size, \pThreePeak{} in peak and \pThreeDensity{} in
   density: in every family the upper bound is below 0, so subtracting what
@@ -618,10 +626,11 @@ removes false positives from a zero-heavy signal that flags almost
 everything (Section~\ref{sec:tools}). \dO{}'s lower bound is above 0 in
 \cellsCountedOLoAbove{} counted cells and its upper bound below 0 in
 \cellsCountedOHiBelow{}; \dD{}'s in \cellsCountedDLoAbove{} and
-\cellsCountedDHiBelow{}. The divergence factor's resolved gains are
-confined to the density families (\cellsDensityDLoAbove{} of
-\cellsDensityFlow{} counted density cells), where a density signal alone
-is a poor god-unit detector and any weighting that reintroduces size helps.
+\cellsCountedDHiBelow{}. The divergence factor's resolved gains,
+\cellsCountedDLoAbove{} of the \cellsCountedFlow{} counted cells, lie
+mostly in the density families (\cellsDensityDLoAbove{} of
+\cellsDensityFlow{}), where a density signal alone is a poor god-unit
+detector and any weighting that reintroduces size helps.
 On Fontana's God Class, read as paired differences only, the outgoing
 factor's gain is large in every family (density: \cellFontanaDensityO{})
 and the divergence factor's smaller (\cellFontanaDensityD{}); in size the
@@ -634,9 +643,8 @@ data, \betweenFlowDataLoAbove{} have a lower bound above 0 and
 \betweenFlowDataHiBelow{} an upper bound below, all on the large seed-3
 sample; of message against flow, \betweenMessageFlowLoAbove{} and
 \betweenMessageFlowHiBelow{}. The human cells that resolve favour message
-over flow by small margins: \betweenBlobPeakMessageFlow{} for Blob in
-peak, \betweenLongStructureMessageFlow{} for Long Method in structure and
-\betweenFontanaDensityMessageFlow{} for Fontana in density. The
+over flow by small margins, \betweenBlobPeakMessageFlow{} for Blob in
+peak and \betweenFontanaDensityMessageFlow{} for Fontana in density. The
 differences between definitions are an order of magnitude smaller than the
 differences between the factors.
 
@@ -647,22 +655,23 @@ differences between the factors.
 Every registered arm was read against \Xs{} on the primary's population;
 Table~\ref{tab:other-arms} lists those not already in
 Table~\ref{tab:primary}. Of the \secOtherArms{} arms, \secOtherLoAbove{}
-have a pooled lower bound above 0 and \secOtherHiBelow{} an upper bound
-below. The outgoing factor on
-\Xs{} itself is \secOFlowMicro{} pooled, the lower bound just short of 0,
-and \secOFlowMacro{} macro, with MCC \secOFlowMcc{} against \primXMcc{},
-recall \secOFlowRecall{} against \primXRecall{} at precision
-\secOFlowPrecision{}; its family average in Section~\ref{sec:cons} is
-resolved. The divergence under data and message, the public input variant,
-and both variants with constructors are each within a few hundredths of the
-primary. The intersection of the two outlier sets (a class flagged on \Xs{}
-and on $d$) raises precision and halves recall: \secAndMicro{}. Form B,
-which aggregates the method-level forms as the companion study aggregates
-complexity, is the only family of arms whose point estimates are
-consistently positive (\secFormBMinMicro{} to \secFormBMaxMicro{} pooled
-over \secFormBArms{} arms, \secFormBMacroLoAbove{} of them with a macro
-lower bound above 0); the per-file maximum of \sig{nloc}$\cdot$\Dflow{} is
-\secDFormBMicro{} pooled and \secDFormBMacro{} macro.
+have a pooled lower bound above 0, the outgoing factor under flow
+(\secOFlowMicro{}) and under message (\secOMessageMicro{}), and
+\secOtherHiBelow{} an upper bound below. The outgoing factor on \Xs{}
+reaches an MCC of \secOFlowMcc{} against \primXMcc{}, recall
+\secOFlowRecall{} against \primXRecall{} at precision \secOFlowPrecision{},
+and its macro difference is \secOFlowMacro{}; its family average in
+Section~\ref{sec:cons} is resolved as well. The divergence under data and
+message, the public input variant, and both variants with constructors are
+each within a few hundredths of the primary. The intersection of the two
+outlier sets (a class flagged on \Xs{} and on $d$) raises precision and
+halves recall: \secAndMicro{}. Form B, which aggregates the method-level
+forms as the companion study aggregates complexity, has point estimates
+between \secFormBMinMicro{} and \secFormBMaxMicro{} pooled over
+\secFormBArms{} arms, none resolved, \secFormBMacroLoAbove{} of them with a
+macro lower bound above 0; the per-file maximum of
+\sig{nloc}$\cdot$\Dflow{} is \secDFormBMicro{} pooled and
+\secDFormBMacro{} macro.
 
 \begin{table}[t]
 \centering
@@ -695,24 +704,26 @@ does; that is the size the outgoing factor carries, and the size null
 repositories (\methUniv{} reviewed methods, \methPos{} positive), \Xm{} =
 \sig{\xMethod} alone reaches an MCC of \methXMcc{} with precision
 \methXPrecision{} and recall \methXRecall{}. Weighting it by \Dflow{} on all
-calls gives \methMicro{}: \textbf{\methReading}. The weighted form keeps
-precision (\methDPrecision{}) and loses recall (\methDRecall{}): it flags
-\methDTp{} of the \methPos{} Long Methods against \methXTp{}, because a
-long method that calls nothing in its own repository is a catchment and is
-exempt. The no-helpers variant is \methNoHelpMicro{}, also worse, and the
-two variants differ by \methNoHelpVsAllMicro{}. The halves say which part
-costs: exemption only is \methEMicro{} (MCC \methEMcc{}, recall
-\methERecall{}), amplification only \methAmpMicro{}, \methAmpReading{}; the
-whole factor against the exemption alone is \methDvsEMicro{},
-\methDvsEReading{}, and against the amplification alone
+calls gives \methMicro{}: \methReading{}, the point estimate against the
+factor. The weighted form raises precision (\methDPrecision{}) and loses
+recall (\methDRecall{}): it flags \methDTp{} of the \methPos{} Long Methods
+against \methXTp{}, because a long method that calls nothing in its own
+repository is a catchment and is exempt. The no-helpers variant is
+\methNoHelpMicro{}, \methNoHelpReading{}; the two variants differ by
+\methNoHelpVsAllMicro{}. The halves say which part costs: exemption only is
+\methEMicro{} (MCC \methEMcc{}, recall \methERecall{}), within hundredths
+of complexity alone; amplification only is \methAmpMicro{},
+\methAmpReading{}; the whole factor against the exemption alone is
+\methDvsEMicro{}, \methDvsEReading{}, and against the amplification alone
 \methDvsAMicro{}. At method level the damage is the amplification, which
-hands the flag to methods that call much and are not long. Fitted on the
-non-exempt units only, with the exempt never flagged, the weighted form
-recovers recall (\methNeRecall{}) at a cost in precision
-(\methNePrecision{}) and is still worse than complexity alone,
-\methNeVsXMicro{}. In Table~\ref{tab:leaf} the method-level leaf diagnostic
-is unresolved, and the mechanism is not read. The JavaParser-only set agrees:
-\methJpMicro{}, \methJpReading{}.
+hands the flag to methods that call much and are not long, and the support
+the leaf diagnostic gives the exemption (Table~\ref{tab:leaf}) does not
+reach it. Fitted on the non-exempt units only, with the exempt never
+flagged, the weighted form recovers recall (\methNeRecall{}) at a cost in
+precision (\methNePrecision{}): \methNeVsXMicro{} against complexity alone,
+\methNeVsXReading{}. The mechanism is not read, since the primary does not
+read refinement. The JavaParser-only set agrees: \methJpMicro{},
+\methJpReading{}.
 
 \begin{table}[t]
 \centering
@@ -744,7 +755,7 @@ large tail. Against NPath the factor is \toolNpathMicro{}, not resolved;
 against Brain Method, whose definition contains nesting, lines and
 cyclomatic complexity, \toolBrainMicro{}, \toolBrainReading{} on both sets
 (\toolBrainJpMicro{} on JavaParser-only): the one resolved gain of the
-primary form anywhere, on an internal definition, and it is the exemption
+primary arm against any oracle, on an internal definition, and it is the exemption
 pruning false positives from a flag set of \toolBrainXRecall{} recall, not a
 better ranking of god methods.
 
@@ -768,7 +779,7 @@ instances separating as expected. The primary's paired difference is
 \fontanaMicro{}: \fontanaReading{}; the weighted arm's MCC is
 \fontanaDMcc{}, its false positives \fontanaDFp{} against \fontanaXFp{}.
 With constructors, \fontanaCtorMicro{}. The leaf diagnostic
-(Table~\ref{tab:leaf}) is unresolved. The replication on a different team's
+(Table~\ref{tab:leaf}) is \leafFontanaReading{} under flow. The replication on a different team's
 labels, different systems and older code gives the same shape as MLCQ: a
 negative point estimate on the whole factor, a large resolved gain on the
 outgoing factor (\cellFontanaDensityO{} in the density family), and a
@@ -819,9 +830,8 @@ only, with the exempt units never flagged, gives an arm at MCC
 \sensNeMcc{} (precision \sensNePrecision{}, recall \sensNeRecall{},
 \sensNeFp{} false positives): \sensNeVsXMicro{} against \Xs{},
 \sensNeVsXReading{}, and \sensNeVsAllMicro{} against the same arm fitted
-on every unit, \sensNeVsAllReading{} on the joined set and
-\sensJpNeVsAllMicro{} on the JavaParser-only set, where it reads
-\sensJpNeVsAllReading{}. The mean-absolute-deviation fallback that the
+on every unit, \sensNeVsAllReading{} (\sensJpNeVsAllMicro{} on the
+JavaParser-only set). The mean-absolute-deviation fallback that the
 zeros force is part of the primary arm's loss, and removing it brings the
 arm back to complexity alone, not past it.
 
@@ -843,13 +853,14 @@ divergence alone, as a detector, has MCC \interBlobDMcc{} against
 \primXMcc{} for complexity alone (\interBlobDVsX{}). The union is
 \interBlobEitherVsX{} against complexity alone and the intersection
 \interBlobBothVsX{}, neither resolved. Against Long Method the intersection
-is \interLongBothPrecision{} precise and costs recall
-(\interLongBothVsX{}); on Fontana the union gains (\interFontanaEitherVsX{},
-MCC \interFontanaEitherMcc{}) because its extreme instances are flagged by
-either measure. The two outlier sets overlap on about half of each's hits
-and the classes in both are the most often Blob, but not by a margin the
-sample resolves. This is exploration, labelled as such, with no prediction
-and no verdict.
+is \interLongBothPrecision{} precise, and the divergence alone is a poorer
+detector than complexity alone (MCC \interLongDMcc{}, \interLongDVsX{});
+on Fontana the union gains (\interFontanaEitherVsX{}, MCC
+\interFontanaEitherMcc{}) and the intersection, \interFontanaBothPrecision{}
+precise, loses recall (\interFontanaBothVsX{}). The units in both outlier
+sets are the most often god units under every oracle, by margins the human
+samples do not resolve. This is exploration, labelled as such, with no
+prediction and no verdict.
 
 \begin{table}[t]
 \centering
@@ -935,13 +946,16 @@ secondaries resolved on the same population are suspect.
 \label{sec:disc}
 
 \paragraph{The construct as registered is not supported, and the data say
-why.} Three things were expected of the divergence factor: that it would
-raise precision by setting complex leaves aside, that the leaves set aside
-would be called god units less often, and that what a unit receives would
-matter as well as what it sends. None is seen. The precision falls and the
-recall rises; the leaf diagnostic is within hundredths of zero on three
-human oracles; and in every family of every class-level oracle,
-subtracting the inputs from the outputs costs agreement. What is seen is
+where it fails.} Three things were expected of the divergence factor: that
+it would raise precision by setting complex leaves aside, that the leaves
+set aside would be called god units less often, and that what a unit
+receives would matter as well as what it sends. The second is seen, in two
+human oracles of three: a flagged catchment is a Long Method, or a Fontana
+God Class, less often than a flagged junction, and for MLCQ's Blob the
+difference is unresolved with every point estimate on the same side. The
+first and the third are not seen. The precision falls and the recall rises,
+and in every family of every class-level oracle, subtracting the inputs from
+the outputs costs agreement. What is seen is
 that the outputs alone carry a signal, resolved against both human class
 oracles and every class-level tool oracle, and the size null says how far
 that signal is size: a plain weighting by the number of methods beats the
@@ -958,9 +972,11 @@ which Arif, Kuutila and Ralph found loading as a construct of its own
 distinguished the extra flags they could read \cite{paperone}.
 
 \paragraph{The amplification, not the exemption, is where the factor
-fails.} At class level the whole factor is worse than either of its halves,
-and at method level the amplification alone accounts for the loss while the
-exemption alone is within hundredths of complexity. A factor of $d + 1$ is
+fails.} At class level the whole
+factor is resolved worse than the exemption alone and not better than the
+amplification alone, and at method level the amplification alone accounts
+for the whole loss while the exemption alone is within hundredths of
+complexity. A factor of $d + 1$ is
 unbounded and, for a class, grows with the number of calls the class makes,
 so the modified z of X$\cdot$D is dominated by the classes that call most,
 whatever their complexity. The outgoing factor has the same unbounded
@@ -970,14 +986,21 @@ subtracting its surface pushes the hubs people call Blobs towards the
 catchment side. That is the opposite of the construct's reading of a
 catchment as a leaf doing honest work.
 
-\paragraph{Where the exemption does help.} The one resolved gain of the
-primary form, against the internal Brain Method on the seed-3 sample, and
-the gains in the density families and at method level against NPath, are
-all cases where complexity alone flags a large tail of a zero-heavy signal,
-and the exemption prunes it. That is a correction for the rule's fallback
-on tied populations, which the companion study reported at method level,
-not evidence that catchments are not god units; the human labels, where a
-catchment's status can be asked directly, say they are god units as often.
+\paragraph{Where the exemption helps, and why it is not enough.} The leaf
+diagnostic says the exemption is a distinction the labels carry: among the
+units complexity flags, a catchment is a god unit less often by two human
+oracles. The exemption-only arm is nonetheless within hundredths of
+complexity alone at both levels, because the catchments it sets aside
+include god units (\leafCatchPositive{} of the \leafCatchFlagged{} among the
+Blob flags, \leafMethodCatchPositive{} of the \leafMethodCatchFlagged{}
+among the Long Method flags) and the zeros it leaves move the rule's scale;
+the whole factor then amplifies the junctions that remain by an unbounded
+$d + 1$, and loses what the exemption gained. The resolved gains of the
+whole factor, against the internal Brain Method and in the density
+families, are cases where complexity alone flags a large tail of a
+zero-heavy signal and the exemption prunes it, a correction for the rule's
+fallback on tied populations, which the companion study reported at method
+level.
 
 \paragraph{The human Blob is weakly predicted by any of this.} Complexity
 alone reaches an MCC of \primXMcc{} against the reviewers on the confirm
@@ -1067,19 +1090,23 @@ number.
 Weighting a unit's complexity by its coupling divergence does not recover
 the classes and methods people call god units better than complexity
 alone. Against MLCQ's reviewers the primary resolves no difference and is
-underpowered, and every resolved reading goes the other way: the whole
-factor loses to each of its halves, to a weighting by the number of
-methods, to complexity alone on the threshold-free ranking, and at method
-level to complexity alone outright. The exemption the claim rests on is
-not in the labels: a complex class that receives more than it sends is
-called a Blob as often as one that sends more. The one component that
-carries a signal is the data a class sends out, resolved against both human
-class oracles and every class-level tool oracle, and subtracting what the
-class receives costs agreement in every family. The construct's verdict,
-by its pre-registered rule, is outgoing data only. A god class is a class
-that sends much out; how much of that is the size of the class, and what
-remains of coupling once size is held, is the question this result leaves
-for a registered test.
+underpowered, and every resolved reading of the whole factor goes the other
+way: it loses to the exemption alone, to a weighting by the number of
+methods, to complexity alone on the threshold-free ranking, and, without
+calls to helpers, to complexity alone at method level outright. The
+exemption the claim rests on is partly in the labels: a complex method that
+receives more than it sends is called a Long Method less often, and such a
+class a God Class less often by Fontana's team, while MLCQ's reviewers call
+it a Blob not detectably less often. What the factor adds to the exemption,
+an amplification by the divergence of a junction, costs more than the
+exemption gains. The one component that carries a signal is the data a
+class sends out, resolved against both human class oracles and every
+class-level tool oracle, and subtracting what the class receives costs
+agreement in every family. The construct's verdict, by its pre-registered
+rule, is outgoing data only. A god class is a class that sends much out.
+How much of that is the size of the class, what remains of coupling once
+size is held, and whether the exemption without the amplification refines
+complexity, are the questions this result leaves for a registered test.
 
 \section*{Competing interests}
 

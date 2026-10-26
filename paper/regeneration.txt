@@ -36,6 +36,9 @@ TABLES (generated/), in the order the paper places them
   Table 9  tab_intersection          exploratory_intersection/joined
   Also written, not placed: tab_xstar_class, tab_xstar_method (decisions/explore-choices.json),
   tab_between_definitions (consistency/joined/between_definitions).
+  DEVIATIONS.md (packed as anc/DEVIATIONS.md): paper/deviations.template.md filled from the same
+  macros, including prior* (results/analysis.v2.json, decisions/*.v1.json) and restored* (the
+  reported population minus the set-aside one).
 
 INLINE NUMBERS (generated/numbers.tex, about 800 macros)
   prim*        primary/joined and primary/javaparser (micro, macro, arms, AUC, gate, verdict,
@@ -57,8 +60,10 @@ INLINE NUMBERS (generated/numbers.tex, about 800 macros)
   xClass*, xMethod*, gate*
                decisions/explore-choices.json
   *VOne*       results/analysis.v1.json (how the set-aside analysis differs)
-  left*        the reviewed units the human populations leave out, from the score files
-               through core.Population (Section 6)
+  prior*, restored*
+               results/analysis.v2.json and decisions/*.v1.json against the reported analysis
+               and choices: every headline reading before and after the population fix
+               (Section 6, anc/DEVIATIONS.md)
 
 CONSTANTS TYPED BY HAND
   The outlier rule's 3.5, the gate's target half-width 0.10 and floor 20, the bootstrap's 2000
