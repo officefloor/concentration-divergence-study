@@ -797,3 +797,80 @@ was made.
    registered; one candidate population (item 3) is noted as outside this study. Seen when
    amended: as for Amendment 7, and the papers, which hold no data of this study. No
    repository of the MLCQ confirm half or of the seed-3 sample had been measured.
+
+9. **26 October 2026: faults in measuring the registered samples are fixed, and the
+   confirmatory analysis is run once more on the complete samples** (Procedure; Fixed in
+   advance). While steps 2 to 6 ran, repositories and systems of the registered samples failed
+   to measure, or measured incompletely, through faults in the harness or the machine, not in
+   the design. Each was fixed in the code or the run, the affected output deleted or forgotten
+   (`cds forget`, recorded in the set's `run.json`) and the step re-run, as Fixed in advance
+   requires. No hypothesis, sample, measure, rule, oracle, estimand, gate or verdict changes:
+   every fix brings the measured samples to the ones registered. In commit order:
+
+   (a) *A verdict with no interval* (`61e2ef8`, 20 October, before any measurement): the
+   verdict on the construct reads *not estimable* when P1 has no interval, instead of failing.
+   (b) *The Fontana fetch's own records* (`e330dab`, `ec6ecce`): the harness's dirty check
+   leaves out `inputs/fontana/SHA256SUMS` and `ACCESS.md`, which the fetch appends to over a
+   day-long download and no number depends on; a second fetch keeps the maintainer's reply
+   recorded by hand in `ACCESS.md`.
+   (c) *Temporary files on disk* (`8052f87`): `/tmp` is a small RAM-backed filesystem; when the
+   seed-3 draw filled it, every clone failed. The step scripts put temporary files under the
+   project's ignored `.tmp/`.
+   (d) *The seed-3 draw's target* (`89447ed`): the first draw, with a target of 540, left 484 of
+   the 500 usable repositories once the 56 in the exclusion lists were removed; its errors were
+   a network outage and the full `/tmp`. It was drawn again with seed 3 and a target of 580,
+   and the 500 measured are selected from it exactly as registered (Oracles 3). The first draw
+   is kept in `sample/attempt-1/` with a note. The target is the sampler's margin, not a
+   constant of this plan.
+   (e) *Clones of the files measured only* (`5af5127`, `4f8b1a5`): each repository is cloned
+   with the sampler's filter for the files a measurement reads, all taken from paper one's
+   constants. Four MLCQ repositories measured from a full and a filtered clone gave identical
+   records apart from wall-clock seconds, and `tests/test_files.py` checks the file-level
+   measures. Paper one is re-pinned to `0f8e654`, whose code is byte-identical to `393da76`;
+   the sampler is pinned at 0.2.1, whose `verify` command runs.
+   (f) *The measurer's heap*: with the 6 GB heap, OctoGramApp/OctoGram (seed-3) spent the 8-hour
+   budget in garbage collection and left 87% of its calls unresolved by budget. The heap is set
+   to 9 GB (`CDS_MEASURER_HEAP=9g`, `pins.MEASURER_HEAP`) for every repository measured from the
+   seed-3 session of 25 October 11:30Z (from #72 of the selection) and for every repository
+   measured again below. The heap bounds the measurer's time, not what it resolves, so it can
+   change a result only through the budget: OctoGram, measured again with 9 GB, resolved every
+   call in 8 minutes, and DrKLO/Telegram (validation) was measured again for the same reason.
+   No MLCQ repository spent its budget with 6 GB. The heap is not written in each row; it is
+   recorded here and by the sessions in each set's `run.json`.
+   (g) *PMD's thread stack* (`88c8b70`): on deeply nested code, PMD's default 1 MB stack
+   overflowed, PMD stopped part-way through its JSON report, paper one's `_pmd_report` could
+   not parse it, and the repository was logged failed on every retry. PMD now runs with a
+   16 MB stack (`PMD_JAVA_OPTS=-Xss16m`, as the measurer); paper one's code is unchanged.
+   Recovered: apache/lucene-solr, eclipse/gef and nsandonato/webtools.sourceediting (MLCQ
+   confirm), eclipse-jdt/eclipse.jdt.core (MLCQ explore), stanfordnlp/CoreNLP,
+   droidefense/engine and HiveGamesOSS/Chunker (seed-3), and
+   makemyownlife/shardingsphere-jdbc-demo (validation). elastic/elasticsearch (seed-3, 20,130
+   files) still produces no PMD report; it is measured and scored, and enters every cell
+   except those of the oracles PMD defines, which have no labels on it.
+   (h) *A repository with no Java units* (`716ff49`): ynsmroztas/AndroHunter (seed-3) is a
+   Kotlin application whose only Java files are generated stubs under `app/build/`, removed by
+   the extra file rule. Scoring stopped on its empty index; it now scores with every count
+   zero, so 499 of the 500 seed-3 repositories carry units. The sample is unchanged.
+   (i) *Fontana's source archives* (`5cf5fbb`): the Qualitas Corpus keeps each system's source
+   only in archives under `compressed/`, named to no one pattern and sometimes nested one in
+   another. Matched by name, 53 of the 73 systems were measured from an empty directory, so
+   113 of the 420 labelled classes and 46 of the 140 God Classes were measured. The source is
+   now the archive, at the top level or nested one level, holding the most `.java` files (the
+   modules of a system shipped as several `*-sources.jar` named after it, together). All 73
+   systems resolve; 417 of the 420 labelled classes and all 140 God Classes land on a measured
+   file; the 20 systems measured before keep the same archive and hash. The three that do not
+   land are trove's benchmark classes, all negatives, which are outside its source jar.
+   `results/fontana` was deleted and step 6 run again. `tests/test_fontana.py` checks the rule.
+   (j) *Step 2 completed*: a network outage from 22 October 18:20Z to 23 October 05:11Z left 83
+   of the 150 validation repositories failed to clone. Step 2 was resumed on 26 October, and
+   all 150 are measured.
+
+   The confirmatory analysis was first written on 26 October (`77645ee`) with Fontana measured
+   on 20 of its 73 systems and elastic/elasticsearch without PMD. It is kept as
+   `results/analysis.v1.json` (sha256 `d64d4c8d…ba3a80`, committed in `analysis-hashes.txt` by
+   `77645ee` and listed there since), and the confirmatory analysis is run once more, on the
+   complete samples, into `results/analysis.json`. The paper reports the second as the
+   confirmatory analysis and states how the first differs. Seen when amended: the progress and
+   error output of steps 2 to 6, which print no result; the explore-half choices of step 7
+   (`a809d0a`), made by the code on the explore half as registered. The first confirmatory
+   analysis was written but none of its results has been read.
