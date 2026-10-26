@@ -37,6 +37,7 @@ Everything is public and Apache-2.0 licensed unless stated.
 | `analysis.v1.json`, `.sha256` | The first confirmatory analysis (2026-10-26 08:04 UTC, commit `a809d0a`, sha256 `d64d4c8d…`), set aside by Amendment 9 because Fontana's archives had resolved for 19 of 73 systems; none of its results had been read. |
 | `analysis.v2.json`, `.sha256` | The second (2026-10-26 09:49 UTC, commit `4d73bc1`, sha256 `9519e246…`), set aside by Amendment 10: the human populations held only the repositories with a positive. Its results had been read and reported to the author in a draft of the paper before the fault was found. `DEVIATIONS.md` tabulates every headline reading of this file against the reported one. |
 | `analysis.exploratory.<utc>.json` | Any later re-analysis (none existed when the paper was built). |
+| `ranking.<utc>.json`, `.sha256` | **The post hoc exploration** (paper, Section 5.9): every candidate form built from size and outgoing calls, scored from the raw records by `scripts/exploratory_ranking.py` (in the harness repository) by the registered rule against every oracle, with paired bootstrap differences against the best complexity-alone signal and the size-only counterparts. Made after every oracle had been read; labelled `kind: exploratory`; its `harness_commit` is inside it and its digest in `analysis-hashes.txt`. |
 | `analysis-hashes.txt` | The committed digests of the analyses, the decisions, the labels, the samples and each set's run and validation records. |
 
 ### `decisions/` : the explore-half choices
@@ -105,6 +106,18 @@ Measuring the published sample files measures exactly the repositories and commi
 did, for as long as GitHub serves those commits and the corpus serves its archives. The
 measurer's time budget (8 hours per repository) and heap (`CDS_MEASURER_HEAP=9g`) are the
 constants recorded in `concentration_divergence_study/pins.py`.
+
+### The post hoc exploration (paper, Section 5.9)
+
+    .venv/bin/python scripts/exploratory_ranking.py              # every set, mad_z, ~5 minutes
+    .venv/bin/python scripts/exploratory_ranking.py --all-rules  # every rule of paper one
+    ./record_hashes.sh                                           # adds its digest to analysis-hashes.txt
+
+It reads `results/<set>/repos/*.json.gz`, builds the forms in its docstring from the measurer's
+per-call data (the plain internal-call count, fan-out as distinct callee files, the method gate
+"makes at least one call"), and writes `results/exploratory/ranking.<utc>.json`. The paper's
+generator reads the latest such file (or `--ranking FILE`) for Section 5.9's two tables and
+inline numbers.
 
 ### The population fault (paper, Section 6; `DEVIATIONS.md`, 1)
 

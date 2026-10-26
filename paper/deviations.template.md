@@ -146,3 +146,12 @@ reviewed Long Method units lie on files the extra file rule drops (out of scope 
 {{labelsBlobMeasured}}. Fontana: of {{fontanaInstances}} instances on {{fontanaFilesReviewed}}
 files, {{fontanaFilesReviewedMeasured}} files land on a measured unit; the three that do not are
 trove's benchmark classes, all negatives, outside its source jar.
+
+## 7. A post hoc exploration after every oracle had been read
+
+After the confirmatory analysis on the registered populations was read, the candidate forms
+the paper's Section 5.9 reports (size times outgoing calls at class level; the "makes a call"
+gate at method level) were computed from the raw records by `scripts/exploratory_ranking.py`
+({{expMadeUtc}}, sha256 `{{expShaShort}}…`) and read against every oracle, both MLCQ halves
+included. Nothing registered changes; the forms are hypotheses for a next registration, chosen
+by looking, and the paper labels every number from them as post hoc.

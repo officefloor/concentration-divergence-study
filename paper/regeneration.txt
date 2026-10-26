@@ -34,6 +34,9 @@ TABLES (generated/), in the order the paper places them
   Table 7  tab_tool_oracles          secondary/joined/tool_oracles (+ _with_constructors)
   Table 8  tab_friedman              secondary/joined/matrix/<oracle>/friedman, flow
   Table 9  tab_intersection          exploratory_intersection/joined
+  Table 10 tab_exploratory_class     results/exploratory/ranking.<utc>.json (scripts/exploratory_ranking.py),
+                                     class populations, mad_z
+  Table 11 tab_exploratory_method    the same, method populations
   Also written, not placed: tab_xstar_class, tab_xstar_method (decisions/explore-choices.json),
   tab_between_definitions (consistency/joined/between_definitions).
   DEVIATIONS.md (packed as anc/DEVIATIONS.md): paper/deviations.template.md filled from the same
@@ -52,6 +55,8 @@ INLINE NUMBERS (generated/numbers.tex, about 800 macros)
                fontana, matrix) and the JavaParser-set counterparts named *Jp*
   sens*        sensitivity/joined and sensitivity/javaparser
   inter*       exploratory_intersection/joined
+  exp*         results/exploratory/ranking.<utc>.json, the post hoc exploration (Section 5.9);
+               --ranking FILE selects a file, the default is the latest
   join*, calls*, role*, throwNew*, di*, pruned*, files*, scale*, zero*, uncoupled*, labels*,
   agree*, pmdCog*, mlcq*, seedThree*, fontana*, validation*
                diagnostics/<set>, results/<set>/validation.json,

@@ -135,6 +135,8 @@ def main() -> int:
                     help="the analysis file to read (default: the confirmatory analysis)")
     ap.add_argument("--decisions", default="decisions/explore-choices.json",
                     help="the explore choices the analysis was made with")
+    ap.add_argument("--ranking", default=None,
+                    help="the exploratory ranking (default: the latest results/exploratory/ranking.*.json)")
     args = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     A = load(args.analysis)
@@ -964,6 +966,131 @@ def main() -> int:
         M("restoredExploreLongRepos", str(met["n_repos"] - D1["method"]["n_repos"]))
     M("xClassChanged", "changed" if D1 and D1["class"]["chosen"] != cls["chosen"] else "unchanged")
     M("xMethodChanged", "changed" if D1 and D1["method"]["chosen"] != met["chosen"] else "unchanged")
+
+    # --- the exploratory ranking (scripts/exploratory_ranking.py, post hoc) --------------------
+    import glob
+    rk = args.ranking or (sorted(glob.glob(os.path.join(ROOT, "results", "exploratory", "ranking.*.json"))) or [None])[-1]
+    R = json.load(open(rk)) if rk and os.path.exists(rk) else None
+    if R:
+        M("expMadeUtc", R["made_utc"][:8] + " " + R["made_utc"][9:15] + " UTC")
+        shafile = rk + ".sha256"
+        M("expShaShort", open(shafile).read().split()[0][:12] if os.path.exists(shafile) else "n/a")
+        pops = {(tuple(p["set_halves"]) if p["set_halves"] else None, p["level"], p["oracle"]): p
+                for p in R["populations"] if p["rule"] == "mad_z"}
+        def rowsof(key):
+            p = pops.get(key)
+            return ({r["form"]: r for r in p["rows"]}, p) if p else ({}, None)
+        bx, bxp = rowsof((("explore",), "class", "human_blob"))
+        bc, bcp = rowsof((("confirm",), "class", "human_blob"))
+        fo, fop = rowsof((None, "class", "human_fontana_god_class"))
+        lx, lxp = rowsof((("explore",), "method", "human_method_long_method"))
+        lc, lcp = rowsof((("confirm",), "method", "human_method_long_method"))
+        def mccs(rows, name):
+            return rate(rows[name]["mcc"], 3) if name in rows else "n/a"
+        CLASS_FORMS = [
+            ("hvol_sum", "Halstead volume, summed (complexity alone)"),
+            ("nloc_sum", "lines, summed"), ("cc_sum", "cyclomatic complexity, summed (WMC)"), ("nloc_max", "lines, per-file maximum (X$^*$)"),
+            ("cognitive_max", "cognitive complexity, maximum"), ("cyc_density_max", "cyclomatic density, maximum"),
+            ("nom", "number of methods"), ("calls_leave", "leaving calls alone"), ("fan_leave", "fan-out (callee files) alone"),
+            ("nloc_sum x nom", "lines summed $\\times$ number of methods (size only)"),
+            ("nloc_max x nom", "lines maximum $\\times$ number of methods (X$^*\\cdot$N)"),
+            ("nloc_sum x (1+calls_leave)", "lines summed $\\times$ (1 + leaving calls)"),
+            ("nloc_sum x (1+fan_leave)", "lines summed $\\times$ (1 + fan-out)"),
+            ("nloc_sum x (1+calls_all)", "lines summed $\\times$ (1 + all internal calls)"),
+            ("nloc_max x (1+calls_leave)", "lines maximum $\\times$ (1 + leaving calls)"),
+            ("nloc_max x (1+out_flow)  [registered X*.O_flow]", "X$^*\\cdot$O$_{\\text{flow}}$ (registered, argument-weighted)"),
+            ("cc_sum x (1+calls_leave)", "cyclomatic summed $\\times$ (1 + leaving calls)"),
+            ("cyc_density_max x (1+calls_leave)", "cyclomatic density maximum $\\times$ (1 + leaving calls)"),
+            ("nom x (1+calls_leave)", "number of methods $\\times$ (1 + leaving calls)"),
+            ("nloc_max x (1+calls_leave/nom)  [per-method rate]", "lines maximum $\\times$ (1 + leaving calls per method)"),
+            ("sum_m nloc(m) x (1+calls_leave(m))  [form B]", "sum over methods of lines $\\times$ (1 + leaving calls), form B"),
+            ("max_m nloc(m) x (1+calls_leave(m))  [form B]", "largest over methods of lines $\\times$ (1 + leaving calls), form B"),
+        ]
+        body = ("\\begin{tabular}{lrrllr}\n\\toprule\nClass form & Explore MCC & Confirm MCC & "
+                "Confirm, against complexity alone & Confirm, against size only & Fontana MCC \\\\\n\\midrule\n")
+        for key, label in CLASS_FORMS:
+            if key in bc:
+                vc = "--" if key == bcp["competitors"]["complexity"] else est(bc[key]["vs_complexity"])
+                vs = "--" if key == bcp["competitors"]["size"] else est(bc[key]["vs_size"])
+                body += f"{label} & {mccs(bx, key)} & {mccs(bc, key)} & {vc} & {vs} & {mccs(fo, key)} \\\\\n"
+        body += "\\bottomrule\n\\end{tabular}\n"
+        write("tab_exploratory_class.tex", body)
+        METHOD_FORMS = [
+            ("tokens", "tokens (complexity alone)"), ("cc", "cyclomatic complexity"), ("cognitive", "cognitive complexity (X$^*_m$)"),
+            ("nloc", "lines"), ("hvol", "Halstead volume"), ("cyc_density", "cyclomatic density"),
+            ("nloc x [any call >= 1]", "lines $\\times$ [makes any call]"),
+            ("nloc x [internal call >= 1]", "lines $\\times$ [makes an internal call]"),
+            ("nloc x [leaving call >= 1]", "lines $\\times$ [makes a call leaving the class]"),
+            ("tokens x [internal call >= 1]", "tokens $\\times$ [makes an internal call]"),
+            ("cc x [internal call >= 1]", "cyclomatic $\\times$ [makes an internal call]"),
+            ("cognitive x [internal call >= 1]", "cognitive $\\times$ [makes an internal call]"),
+            ("cyc_density x [internal call >= 1]", "cyclomatic density $\\times$ [makes an internal call]"),
+            ("nloc x (1+calls_all)  [weight, not gate]", "lines $\\times$ (1 + internal calls), the weight"),
+            ("calls_all", "internal calls alone"),
+        ]
+        body = ("\\begin{tabular}{lrrrrll}\n\\toprule\nMethod form & Explore MCC & Confirm MCC & Precision & Recall & "
+                "Confirm, against tokens & Confirm, against lines \\\\\n\\midrule\n")
+        for key, label in METHOD_FORMS:
+            if key in lc:
+                r = lc[key]
+                vc = "--" if key == lcp["competitors"]["complexity"] else est(r["vs_complexity"])
+                vs = "--" if key == lcp["competitors"]["size"] else est(r["vs_size"])
+                body += (f"{label} & {mccs(lx, key)} & {mccs(lc, key)} & {rate(r['precision'])} & {rate(r['recall'])} & "
+                         f"{vc} & {vs} \\\\\n")
+        body += "\\bottomrule\n\\end{tabular}\n"
+        write("tab_exploratory_method.tex", body)
+        # inline numbers
+        M("expClassForms", str(len(bcp["rows"])))
+        M("expMethodForms", str(len(lcp["rows"])))
+        M("expBlobConfirmRepos", str(bcp["n_repos"])); M("expBlobExploreRepos", str(bxp["n_repos"]))
+        M("expLongConfirmRepos", str(lcp["n_repos"])); M("expLongExploreRepos", str(lxp["n_repos"]))
+        topc = bcp["rows"][0]; topx = bxp["rows"][0]
+        M("expClassTopConfirm", dict(CLASS_FORMS).get(topc["form"], tex_escape(topc["form"])))
+        M("expClassTopConfirmMcc", rate(topc["mcc"], 3))
+        M("expClassTopExplore", dict(CLASS_FORMS).get(topx["form"], tex_escape(topx["form"])))
+        M("expClassTopExploreMcc", rate(topx["mcc"], 3))
+        k = "nloc_sum x (1+calls_leave)"
+        M("expSizeCallsConfirmMcc", mccs(bc, k)); M("expSizeCallsExploreMcc", mccs(bx, k)); M("expSizeCallsFontanaMcc", mccs(fo, k))
+        M("expSizeCallsConfirmVsComplexity", est(bc[k]["vs_complexity"])); M("expSizeCallsExploreVsComplexity", est(bx[k]["vs_complexity"]))
+        M("expSizeCallsConfirmVsSize", est(bc[k]["vs_size"])); M("expSizeCallsExploreVsSize", est(bx[k]["vs_size"]))
+        M("expSizeCallsConfirmPrecision", rate(bc[k]["precision"])); M("expSizeCallsConfirmRecall", rate(bc[k]["recall"]))
+        k2 = "nloc_sum x (1+fan_leave)"
+        M("expSizeFanConfirmMcc", mccs(bc, k2)); M("expSizeFanExploreMcc", mccs(bx, k2))
+        M("expComplexityConfirmMcc", mccs(bc, "hvol_sum")); M("expComplexityExploreMcc", mccs(bx, "hvol_sum"))
+        M("expSizeOnlyConfirmMcc", mccs(bc, "nloc_sum x nom")); M("expSizeOnlyExploreMcc", mccs(bx, "nloc_sum x nom"))
+        M("expCallsAloneConfirmMcc", mccs(bc, "calls_leave")); M("expFanAloneConfirmMcc", mccs(bc, "fan_leave"))
+        M("expDensityCallsConfirmMcc", mccs(bc, "cyc_density_max x (1+calls_leave)")); M("expDensityConfirmMcc", mccs(bc, "cyc_density_max"))
+        M("expFormBSumConfirmMcc", mccs(bc, "sum_m nloc(m) x (1+calls_leave(m))  [form B]"))
+        M("expRateConfirmMcc", mccs(bc, "nloc_max x (1+calls_leave/nom)  [per-method rate]"))
+        ko = "nloc_max x (1+out_flow)  [registered X*.O_flow]"
+        M("expXOConfirmVsSizeMax", est(bc[ko]["vs_size_max"])); M("expXOExploreVsSizeMax", est(bx[ko]["vs_size_max"]))
+        M("expXOFontanaVsSizeMax", est(fo[ko]["vs_size_max"]))
+        M("expFontanaTop", dict(CLASS_FORMS).get(fop["rows"][0]["form"], tex_escape(fop["rows"][0]["form"])))
+        M("expFontanaTopMcc", rate(fop["rows"][0]["mcc"], 3)); M("expFontanaComplexityMcc", mccs(fo, "hvol_sum"))
+        g = "nloc x [any call >= 1]"; gi = "nloc x [internal call >= 1]"
+        M("expGateAnyConfirmMcc", mccs(lc, g)); M("expGateAnyExploreMcc", mccs(lx, g))
+        M("expGateAnyConfirmPrecision", rate(lc[g]["precision"])); M("expGateAnyConfirmRecall", rate(lc[g]["recall"]))
+        M("expGateAnyConfirmVsTokens", est(lc[g]["vs_complexity"])); M("expGateAnyExploreVsTokens", est(lx[g]["vs_complexity"]))
+        M("expGateAnyConfirmVsLines", est(lc[g]["vs_size"]))
+        M("expGateIntConfirmMcc", mccs(lc, gi)); M("expGateIntExploreMcc", mccs(lx, gi))
+        M("expGateIntConfirmVsTokens", est(lc[gi]["vs_complexity"])); M("expGateIntExploreVsTokens", est(lx[gi]["vs_complexity"]))
+        M("expTokensConfirmMcc", mccs(lc, "tokens")); M("expTokensExploreMcc", mccs(lx, "tokens"))
+        M("expLinesConfirmMcc", mccs(lc, "nloc"))
+        M("expWeightConfirmMcc", mccs(lc, "nloc x (1+calls_all)  [weight, not gate]"))
+        M("expWeightConfirmVsTokens", est(lc["nloc x (1+calls_all)  [weight, not gate]"]["vs_complexity"]))
+        M("expDensityGateConfirmMcc", mccs(lc, "cyc_density x [internal call >= 1]"))
+        M("expMethodDensityConfirmMcc", mccs(lc, "cyc_density"))
+        M("expGateLeaveConfirmMcc", mccs(lc, "nloc x [leaving call >= 1]"))
+        # the tool oracles: the top form and the gate's cost
+        for o, tag in (("pmd_GodClass", "Pmd"), ("wmc47", "Wmc"), ("decor_blob", "Decor")):
+            rows_, pp = rowsof((None, "class", o))
+            if pp:
+                M(f"expTool{tag}Top", dict(CLASS_FORMS).get(pp["rows"][0]["form"], tex_escape(pp["rows"][0]["form"])))
+                M(f"expTool{tag}TopMcc", rate(pp["rows"][0]["mcc"], 3))
+        M("expToolNpathCcMcc", mccs(rowsof((None, "method", "pmd_method_NPath200"))[0], "cc"))
+        M("expToolNpathCcGateMcc", mccs(rowsof((None, "method", "pmd_method_NPath200"))[0], "cc x [internal call >= 1]"))
+        M("expToolBrainCogMcc", mccs(rowsof((None, "method", "brain_method"))[0], "cognitive"))
+        M("expToolBrainCogGateMcc", mccs(rowsof((None, "method", "brain_method"))[0], "cognitive x [internal call >= 1]"))
 
     # the ancillary account of every deviation, from the same numbers
     def plain(v: str) -> str:

@@ -179,6 +179,22 @@ strong method consumer \cite{zhang2025deps}; theirs is the closest published
 typology to the in and out counted here, with direction taken relative to a
 pair of smells rather than to the unit's own flow.
 
+Two older measures sit beside the forms the exploration in
+Section~\ref{sec:explore-forms} arrives at. Chidamber and Kemerer's
+response for a class is the number of methods a class declares plus the
+number it calls \cite{ck1994}, size and out-calls in one sum; and Lanza and
+Marinescu's method-level Intensive and Dispersed Coupling flag a method by
+the number of methods it calls, conjoined with nesting
+\cite{lanza2006}. Their Brain Method is long, branchy, deeply nested and
+touches many variables, with no call count in it. El Emam and colleagues
+showed that object-oriented metrics lose most of their predictive power once
+class size is controlled \cite{elemam2001}, which is why every form here is
+read against a size-only competitor. Cognitive complexity counts a whole
+\texttt{switch} once so that a lookup table is not scored as branchy
+\cite{campbell2018}, the one place in the detection literature where a long
+self-contained method is deliberately discounted; a search found no
+detection rule that excludes methods which make no call.
+
 The human oracle is MLCQ \cite{mlcq2020}, professional developers' reviews
 of Java open-source classes and methods, with the companion study's
 strict-majority aggregation and its explore and confirm halves frozen before
@@ -874,6 +890,108 @@ column is the pooled MCC of the union minus that of \Xs{}.}
 \fitwidth{\input{generated/tab_intersection}}
 \end{table}
 
+\subsection{Exploratory, post hoc: size times calls, and the leaf gate}
+\label{sec:explore-forms}
+
+Everything in this subsection was computed after every oracle of the study
+had been read, from the raw records, by a script that is in the ancillary
+data with its output and digest; it is the exploratory step of a next
+registration and changes nothing above. It asks what the registered forms
+mixed together: whether the signal in the outgoing factor is the calls or
+the data on them, whether it is beyond size, and what the exemption does on
+its own. Each form is scored by the registered rule on every unit of the
+repository and read against the best complexity-alone signal and against a
+size-only counterpart, with the plan's bootstrap, on both MLCQ halves (both
+exploration material now), on Fontana's God Class and on the tool oracles.
+
+\begin{table}[t]
+\centering
+\caption{Exploratory, post hoc: class forms built from size and outgoing
+calls, pooled MCC against MLCQ human Blob on each half and against Fontana's
+God Class, by \madz{}. ``Leaving calls'' is the number of call sites in the
+class that resolve to the repository's own code outside the class, each call
+one unit; ``fan-out'' the number of distinct callee files. The paired
+differences are against Halstead volume summed (the best complexity-alone
+signal) and against lines summed $\times$ number of methods (size only), on
+the confirm half.}
+\label{tab:explore-class}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\fitwidth{\input{generated/tab_exploratory_class}}
+\end{table}
+
+\paragraph{Classes.} Of \expClassForms{} forms (Table~\ref{tab:explore-class}),
+the one that leads on both halves is the class's total lines times one plus
+its leaving calls: \expSizeCallsExploreMcc{} on explore and
+\expSizeCallsConfirmMcc{} on confirm, against \expComplexityExploreMcc{}
+and \expComplexityConfirmMcc{} for the best complexity-alone signal
+(\expSizeCallsConfirmVsComplexity{} on confirm, \expSizeCallsExploreVsComplexity{}
+on explore, neither resolved) and against \expSizeOnlyExploreMcc{} and
+\expSizeOnlyConfirmMcc{} for the size-only counterpart
+(\expSizeCallsConfirmVsSize{} on confirm, resolved;
+\expSizeCallsExploreVsSize{} on explore, not). The plain count of calls does
+as well as the registered argument-weighted outgoing data, and fan-out by
+distinct callee files does as well as the call count
+(\expSizeFanConfirmMcc{}); so the unit of the signal is the call, not the
+data on it. The calls alone are weak (\expCallsAloneConfirmMcc{}), the
+per-method products summed (form B) are below the class total
+(\expFormBSumConfirmMcc{}), and the per-method call rate, which takes size
+out, is weaker still (\expRateConfirmMcc{}). Cyclomatic density times calls
+(\expDensityCallsConfirmMcc{}) says the complexity beyond length adds
+nothing. The registered \Xs$\cdot$\Oflow{} against its own size null
+\Xs$\cdot$N, the comparison the plan did not register, is
+\expXOConfirmVsSizeMax{} on confirm and \expXOExploreVsSizeMax{} on explore,
+and \expXOFontanaVsSizeMax{} on Fontana. On Fontana every form of size ties
+near \expFontanaComplexityMcc{}. Against the tool oracles the ingredient
+signals lead, as they must: \expToolPmdTop{} against PMD GodClass
+(\expToolPmdTopMcc{}), \expToolWmcTop{} against WMC (\expToolWmcTopMcc{}).
+
+\begin{table}[t]
+\centering
+\caption{Exploratory, post hoc: method forms against MLCQ human Long Method
+on each half, by \madz{}. A gate ``[makes a call]'' multiplies by 1 or 0;
+``internal'' means a call that resolves to the repository's own code,
+``any'' any call site whatever its target. Precision and recall are on the
+confirm half; the paired differences are against tokens (the best
+complexity-alone signal) and against lines.}
+\label{tab:explore-method}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\fitwidth{\input{generated/tab_exploratory_method}}
+\end{table}
+
+\paragraph{Methods.} The method-level result is the exemption in its
+crudest form, and it is the largest effect in the paper
+(Table~\ref{tab:explore-method}). Among methods that make at least one call
+of any kind, a method's length alone reaches an MCC of
+\expGateAnyConfirmMcc{} on confirm (precision \expGateAnyConfirmPrecision{},
+recall \expGateAnyConfirmRecall{}) and \expGateAnyExploreMcc{} on explore,
+against \expTokensConfirmMcc{} and \expTokensExploreMcc{} for tokens, the
+best complexity-alone signal: \expGateAnyConfirmVsTokens{} on confirm and
+\expGateAnyExploreVsTokens{} on explore. Gating on an internal call instead
+gives \expGateIntConfirmMcc{} and \expGateIntExploreMcc{}
+(\expGateIntConfirmVsTokens{} and \expGateIntExploreVsTokens{}), so the gain
+does not depend on the symbol solver; gating on a call that leaves the class
+loses it (\expGateLeaveConfirmMcc{}). Weighting lines by the number of calls,
+the registered form, destroys it: \expWeightConfirmMcc{},
+\expWeightConfirmVsTokens{}. Lines alone, ungated, is \expLinesConfirmMcc{}.
+A long method that calls nothing at all, a lookup table, a large initialiser,
+a hand-written state machine, is not what the reviewers call a Long Method,
+and once those are set aside length is the signal; cyclomatic density is
+near zero gated or not (\expDensityGateConfirmMcc{},
+\expMethodDensityConfirmMcc{}). Against the tool definitions, which have no
+such exemption, the gate costs a little (PMD NPath: \expToolNpathCcMcc{} to
+\expToolNpathCcGateMcc{} on cyclomatic; Brain Method:
+\expToolBrainCogMcc{} to \expToolBrainCogGateMcc{} on cognitive).
+
+\paragraph{What this is and is not.} These are the best of
+\expClassForms{} class forms and \expMethodForms{} method forms, chosen by
+looking, on labels that had all been read. The class-level gain over complexity alone is about +0.03 on each half and
+unresolved; the method-level gain is resolved on the confirm half for both
+gates and on the explore half for the internal-call gate. Both are hypotheses for the
+next registration, stated in Section~\ref{sec:disc}, and neither is a result
+of this study.
+
 \section{Deviations from the plan}
 \label{sec:deviations}
 
@@ -995,12 +1113,37 @@ include god units (\leafCatchPositive{} of the \leafCatchFlagged{} among the
 Blob flags, \leafMethodCatchPositive{} of the \leafMethodCatchFlagged{}
 among the Long Method flags) and the zeros it leaves move the rule's scale;
 the whole factor then amplifies the junctions that remain by an unbounded
-$d + 1$, and loses what the exemption gained. The resolved gains of the
-whole factor, against the internal Brain Method and in the density
-families, are cases where complexity alone flags a large tail of a
-zero-heavy signal and the exemption prunes it, a correction for the rule's
-fallback on tied populations, which the companion study reported at method
-level.
+$d + 1$, and loses what the exemption gained. The resolved gains of the whole factor, against the internal Brain Method
+and in the density families, are cases where complexity alone flags a large
+tail of a zero-heavy signal and the exemption prunes it, a correction for the
+rule's fallback on tied populations, which the companion study reported at
+method level. The post hoc exploration (Section~\ref{sec:explore-forms})
+finds the exemption's own form: a gate on whether the method makes any call
+at all, which lifts length from \expTokensConfirmMcc{} (tokens) to
+\expGateAnyConfirmMcc{} against Long Method on the confirm half, resolved
+there and, for the internal-call gate, on the explore half too. The
+registered factor carried that gate and an amplification by the call count
+together, and the amplification cost more than the gate gained.
+
+\paragraph{Two hypotheses for the next registration.} The exploration leaves
+two forms, each old in its ingredients. A god class is a class whose total
+lines times its outgoing calls is an outlier for its codebase: size times
+fan-out, which is Chidamber and Kemerer's response for a class as a product
+rather than a sum, and Lanza and Marinescu's God Class without the cohesion
+clause. It is ahead of complexity alone by about +0.03 on each half,
+unresolved, and ahead of a size-only weighting on one half; the next study's
+primary is that form against its size-only counterpart, and against CBO and
+RFC, on labels no one has read. A god method is a method whose length is an
+outlier for its codebase among the methods that make a call: the leaf
+exemption as a gate, with no amplification. It is ahead of the best complexity-alone signal by
+\expGateAnyConfirmVsTokens{} on the confirm half, resolved there and on the
+explore half in its internal-call form, needs no symbol resolution, and a search found no
+detection rule that states it; its nearest relatives, Brain Method and
+Intensive Coupling, point elsewhere. Both are post hoc and were found by
+searching; the power estimate from this study's intervals says the
+class-level claim needs either several times the labelled repositories or a
+better measure, and the method-level claim is within reach of the labels
+that exist.
 
 \paragraph{The human Blob is weakly predicted by any of this.} Complexity
 alone reaches an MCC of \primXMcc{} against the reviewers on the confirm
@@ -1079,8 +1222,9 @@ measurer's validation; the per-set run records and diagnostics; the sample
 files that pin every repository and system to its commit or archive; the
 converted MLCQ labels and the Fontana labels with the record of where the
 corpus came from and the maintainer's reply; and the list of MLCQ
-repositories whose labelled commits moved. The raw per-repository records
-regenerate by running the harness on the sample files. The ancillary README
+repositories whose labelled commits moved. The post hoc exploration's script, its output and its digest are there too,
+labelled as such. The raw per-repository records regenerate by running the
+harness on the sample files. The ancillary README
 names the public repositories of the harness, the companion study, the
 sampler and the measurer, the commit of each, and the command behind every
 number.
@@ -1104,9 +1248,13 @@ class sends out, resolved against both human class oracles and every
 class-level tool oracle, and subtracting what the class receives costs
 agreement in every family. The construct's verdict, by its pre-registered
 rule, is outgoing data only. A god class is a class that sends much out.
-How much of that is the size of the class, what remains of coupling once
-size is held, and whether the exemption without the amplification refines
-complexity, are the questions this result leaves for a registered test.
+How much of that is the size of the class, and what remains of coupling
+once size is held, are the questions this result leaves for a registered
+test, with the post hoc exploration's two forms as the hypotheses: total
+lines times outgoing calls for a class, and length among the methods that
+make any call for a method, the second of which lifts Long Method recovery
+from an MCC of \expTokensConfirmMcc{} to \expGateAnyConfirmMcc{} on the
+confirm half and is the clearest lead the study produced.
 
 \section*{Competing interests}
 
@@ -1146,6 +1294,11 @@ the author.
 \bibitem{cktool} M.~Aniche,
   ``Java code metrics calculator (CK),'' 2015. Version 0.7.0.
 
+\bibitem{ck1994} S.~R. Chidamber and C.~F. Kemerer,
+  ``A Metrics Suite for Object Oriented Design,''
+  \emph{IEEE Transactions on Software Engineering}, vol.~20, no.~6,
+  pp.~476--493, 1994.
+
 \bibitem{campbell2018} G.~A. Campbell,
   ``Cognitive Complexity: a new way of measuring understandability,''
   SonarSource white paper, 2018.
@@ -1156,6 +1309,12 @@ the author.
   yet?''
   in \emph{Proc. 25th IEEE International Conference on Software Analysis,
   Evolution and Reengineering (SANER)}, pp.~612--621, 2018.
+
+\bibitem{elemam2001} K.~El~Emam, S.~Benlarbi, N.~Goel and S.~N. Rai,
+  ``The confounding effect of class size on the validity of object-oriented
+  metrics,''
+  \emph{IEEE Transactions on Software Engineering}, vol.~27, no.~7,
+  pp.~630--650, 2001.
 
 \bibitem{friedman1937} M.~Friedman,
   ``The use of ranks to avoid the assumption of normality implicit in the
