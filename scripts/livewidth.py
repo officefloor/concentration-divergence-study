@@ -19,7 +19,8 @@ checked against its recorded sha256) and parsed by the measurer jar's LiveWidth 
 solver, so seconds to minutes per repository). The file list is the record's own (the measurer's
 files), so the units are the measurer's; every repository's facts are checked against the
 record's units, and a mismatch is counted, never dropped. Writes
-results/exploratory/livewidth/<set>/<key>.json.gz; resumable (a written repository is skipped).
+results/exploratory/livewidth/<set>/<key>.json.gz; resumable (a repository written by this
+schema is skipped; one written by an older schema is measured again).
 The widths are read by scripts/exploratory_livewidth.py with the functions below.
 """
 from __future__ import annotations
@@ -40,11 +41,12 @@ sys.path.insert(0, ROOT)
 from concentration_divergence_study import pins, records  # noqa: E402
 
 MAIN = "net.officefloor.divergence.LiveWidth"
-SCHEMA = 1                                  # LiveWidth.SCHEMA
+SCHEMA = 2                                  # LiveWidth.SCHEMA
 OUT = os.path.join(pins.RESULTS, "exploratory", "livewidth")
 
-# a variable's facts, as LiveWidth.java writes them
-NAME, KIND, FIRST, LAST, LOOP_FIRST, LOOP_LAST, DEFS, STEPS, MUTS = range(9)
+# a variable's facts, and a call's, as LiveWidth.java writes them
+NAME, KIND, FIRST, LAST, LOOP_FIRST, LOOP_LAST, DEFS, STEPS, MUTS, FROM = range(10)
+C_LINE, C_ARGS, C_RECEIVER, C_RESULT = range(4)
 PARAM, LOCAL, FIELD = 0, 1, 2
 
 # The variants: which variables (locals: parameters and locals; all: fields too), the range
@@ -123,6 +125,73 @@ def counts(m: dict) -> dict:
             "fields": sum(v[KIND] == FIELD for v in vs),
             "reassigned": sum(weight(v, "role") > 1 for v in vs),
             "weighted": float(sum(weight(v, "role") for v in vs))}
+
+
+# How data moves through a method, from what enters it to the calls it fans out to (only the
+# calls that resolve to an analysed file: the measurer's internal calls, its sinew).
+#   in_params, in_fields, in_results  what enters: parameters and fields referenced, and the
+#                                     variables an internal call's result is held in
+#   in_all                            all three, each variable once
+#   max_from                          the most variables any one variable is computed from
+#   derived                           the variables computed from at least one other
+#   out_vars                          the variables passed to an internal call (argument or
+#                                     receiver)
+#   max_fanout                        the most internal calls one variable is passed to
+#   in_out                            entering variables that reach an internal call, directly or
+#                                     through what is computed from them
+#   in_through                        parameters and fields passed to an internal call as they
+#                                     came (never reassigned): a pipe strand
+#   in_caught                         entering variables that reach no internal call
+#   bridging                          variables live (the loop range) at two or more lines with an
+#                                     internal call: state held across calls
+#   lw_at_calls                       the headline width at the lines with an internal call
+FLOW = ("in_params", "in_fields", "in_results", "in_all", "max_from", "derived", "out_vars",
+        "max_fanout", "in_out", "in_through", "in_caught", "bridging", "lw_at_calls")
+
+
+def flow(m: dict, internal: list) -> dict:
+    """The FLOW measures of one method; `internal` holds, per call of m["calls"], whether it
+    resolved to an analysed file (the measurer record's resolution, call for call)."""
+    vs = m["vars"]
+    calls = [c for c, keep in zip(m.get("calls", []), internal) if keep]
+    params = {i for i, v in enumerate(vs) if v[KIND] == PARAM}
+    fields = {i for i, v in enumerate(vs) if v[KIND] == FIELD}
+    results = {c[C_RESULT] for c in calls if c[C_RESULT] >= 0}
+    incoming = params | fields | results
+    fanout = [0] * len(vs)
+    for c in calls:
+        for i in set(c[C_ARGS]) | set(c[C_RECEIVER]):
+            fanout[i] += 1
+    feeds = [[] for _ in vs]                       # u -> the variables computed from u
+    for j, v in enumerate(vs):
+        for u in v[FROM]:
+            feeds[u].append(j)
+
+    def reaches_out(u: int) -> bool:
+        seen, todo = {u}, [u]
+        while todo:
+            x = todo.pop()
+            if fanout[x]:
+                return True
+            for y in feeds[x]:
+                if y not in seen:
+                    seen.add(y)
+                    todo.append(y)
+        return False
+    in_out = sum(reaches_out(u) for u in incoming)
+    call_lines = sorted({c[C_LINE] for c in calls})
+    bridging = sum(sum(v[LOOP_FIRST] <= ln <= v[LOOP_LAST] for ln in call_lines) >= 2 for v in vs)
+    at_calls = 0.0
+    if call_lines and m["lines"]:
+        w = dict(zip(m["lines"], widths(m, HEADLINE)))
+        at_calls = float(max(w.get(ln, 0.0) for ln in call_lines))
+    return {"in_params": len(params), "in_fields": len(fields), "in_results": len(results),
+            "in_all": len(incoming), "max_from": max((len(v[FROM]) for v in vs), default=0),
+            "derived": sum(bool(v[FROM]) for v in vs),
+            "out_vars": sum(bool(f) for f in fanout), "max_fanout": max(fanout, default=0),
+            "in_out": in_out,
+            "in_through": sum(1 for i in params | fields if fanout[i] and vs[i][DEFS] <= 1),
+            "in_caught": len(incoming) - in_out, "bridging": bridging, "lw_at_calls": at_calls}
 
 
 def by_unit(doc: dict) -> dict:
@@ -217,8 +286,8 @@ def measure_set(set_name: str, limit: int | None = None) -> None:
     done = 0
     for i, r in enumerate(todo, 1):
         path = os.path.join(out_dir, r["key"] + ".json.gz")
-        if os.path.exists(path):
-            continue
+        if os.path.exists(path) and records.read_json_gz(path)["facts"].get("livewidth") == SCHEMA:
+            continue                    # written by this schema (an older one is measured again)
         rec = records.read_json_gz(records.record_path(results, r["key"]))
         jp = rec.get("javaparser")
         if not jp:
@@ -281,20 +350,32 @@ public class F {
     }
 }
 """}
-# (method, name line) -> {variable: [kind, first, last, loop_first, loop_last, defs, steps, muts]}
+# (method, name line) -> {variable: [kind, first, last, loop_first, loop_last, defs, steps, muts,
+# [the variables it is computed from]]}
 EXPECTED = {
-    ("seq", 5): {"a": [0, 6, 6, 6, 6, 1, 0, 0], "b": [0, 8, 8, 8, 8, 1, 0, 0],
-                 "x": [1, 6, 7, 6, 7, 1, 0, 0], "y": [1, 7, 8, 7, 8, 1, 0, 0],
-                 "z": [1, 8, 9, 8, 9, 1, 0, 0]},
-    ("loop", 11): {"items": [0, 14, 17, 13, 17, 1, 0, 0], "limit": [0, 13, 13, 13, 16, 1, 0, 0],
-                   "sum": [1, 12, 22, 12, 22, 2, 0, 0], "i": [1, 13, 14, 13, 14, 2, 1, 0],
-                   "s": [1, 14, 15, 14, 15, 1, 0, 0], "t": [1, 17, 17, 17, 17, 1, 0, 0],
-                   "arr": [1, 18, 19, 18, 19, 1, 0, 1], "r": [1, 20, 20, 20, 20, 1, 0, 0],
-                   "q": [1, 20, 20, 20, 20, 1, 0, 0], "o": [1, 21, 21, 21, 21, 1, 0, 0],
-                   "e": [1, 22, 22, 22, 22, 1, 0, 0], "count": [2, 17, 20, 17, 20, 2, 1, 0]},
-    ("toString", 21): {"inner": [1, 21, 21, 21, 21, 1, 0, 0]},
-    ("pat", 24): {"o": [0, 25, 25, 25, 25, 1, 0, 0], "n": [0, 25, 27, 25, 27, 3, 0, 0],
-                  "str": [1, 25, 25, 25, 25, 1, 0, 0], "count": [2, 27, 27, 27, 27, 1, 0, 0]},
+    ("seq", 5): {"a": [0, 6, 6, 6, 6, 1, 0, 0, []], "b": [0, 8, 8, 8, 8, 1, 0, 0, []],
+                 "x": [1, 6, 7, 6, 7, 1, 0, 0, ["a"]], "y": [1, 7, 8, 7, 8, 1, 0, 0, ["x"]],
+                 "z": [1, 8, 9, 8, 9, 1, 0, 0, ["b", "y"]]},
+    ("loop", 11): {"items": [0, 14, 17, 13, 17, 1, 0, 0, []], "limit": [0, 13, 13, 13, 16, 1, 0, 0, []],
+                   "sum": [1, 12, 22, 12, 22, 2, 0, 0, ["s"]], "i": [1, 13, 14, 13, 14, 2, 1, 0, []],
+                   "s": [1, 14, 15, 14, 15, 1, 0, 0, ["i", "items"]],
+                   "t": [1, 17, 17, 17, 17, 1, 0, 0, ["items"]],
+                   "arr": [1, 18, 19, 18, 19, 1, 0, 1, ["sum"]],
+                   "r": [1, 20, 20, 20, 20, 1, 0, 0, ["count", "q"]],
+                   "q": [1, 20, 20, 20, 20, 1, 0, 0, []], "o": [1, 21, 21, 21, 21, 1, 0, 0, []],
+                   "e": [1, 22, 22, 22, 22, 1, 0, 0, []], "count": [2, 17, 20, 17, 20, 2, 1, 0, []]},
+    ("toString", 21): {"inner": [1, 21, 21, 21, 21, 1, 0, 0, []]},
+    ("pat", 24): {"o": [0, 25, 25, 25, 25, 1, 0, 0, []], "n": [0, 25, 27, 25, 27, 3, 0, 0, ["str"]],
+                  "str": [1, 25, 25, 25, 25, 1, 0, 0, ["o"]],
+                  "count": [2, 27, 27, 27, 27, 1, 0, 0, []]},
+}
+# (method, name line) -> [[line, [arguments], [receiver], result]], in the measurer's call order
+EXPECTED_CALLS = {
+    ("seq", 5): [],
+    ("loop", 11): [[14, ["i"], ["items"], "s"], [15, [], ["s"], "sum"], [20, ["count", "q"], [], None],
+                   [21, [], [], "o"], [22, ["sum"], [], None], [22, [], ["e"], None]],
+    ("toString", 21): [],
+    ("pat", 24): [[25, [], ["str"], "n"]],
 }
 
 
@@ -317,10 +398,19 @@ def check(jar: str = pins.MEASURER_JAR) -> list[str]:
     doc = fixture_doc(jar)
     if doc.get("livewidth") != SCHEMA:
         return [f"the jar writes live-width schema {doc.get('livewidth')}, not {SCHEMA}: rebuild it"]
-    got = {(m["name"], m["name_line"]): {v[NAME]: v[1:] for v in m["vars"]}
-           for f in doc["files"] for m in f["methods"]}
+    got, got_calls = {}, {}
+    for f in doc["files"]:
+        for m in f["methods"]:
+            names = [v[NAME] for v in m["vars"]]
+            key = (m["name"], m["name_line"])
+            got[key] = {v[NAME]: v[KIND:FROM] + [sorted(names[i] for i in v[FROM])] for v in m["vars"]}
+            got_calls[key] = [[c[C_LINE], sorted(names[i] for i in c[C_ARGS]),
+                               sorted(names[i] for i in c[C_RECEIVER]),
+                               names[c[C_RESULT]] if c[C_RESULT] >= 0 else None] for c in m["calls"]]
     problems = [f"live-width fixture {k}: got {got.get(k)}, expected {want}"
                 for k, want in EXPECTED.items() if got.get(k) != want]
+    problems += [f"live-width fixture calls {k}: got {got_calls.get(k)}, expected {want}"
+                 for k, want in EXPECTED_CALLS.items() if got_calls.get(k) != want]
     extra = set(got) - set(EXPECTED)
     if extra:
         problems.append(f"live-width fixture: unexpected units {sorted(extra)}")

@@ -12,10 +12,12 @@
 # bound by the network). The pass is checked on its fixture first. Facts go to
 # results/exploratory/livewidth/<set>/<key>.json.gz; a re-run skips what is written and retries
 # what failed. Then scripts/exploratory_livewidth.py scores every variant, and the plain
-# counts of the method's variables, against length, tokens, length x [internal call >= 1] and
+# counts of the method's variables, and how data flows from what enters the method to its
+# internal calls (each call's resolution from the measurer record), against length, tokens, length x [internal call >= 1] and
 # the count of all variables, by the registered rule and by absolute cutoffs (the
 # MLCQ cutoff chosen on the explore half, read on the confirm half), and writes
-# results/exploratory/livewidth.<utc>.json. Needs network access, git 2.27+ and Java 17+ (or
+# results/exploratory/livewidth.<utc>.json and, small enough to commit, the reviewed methods'
+# values as results/exploratory/livewidth-units.<utc>.csv.gz. Needs network access, git 2.27+ and Java 17+ (or
 # CDS_JAVA naming one). Post hoc (see step 9).
 set -euo pipefail
 cd "$(dirname "$0")"

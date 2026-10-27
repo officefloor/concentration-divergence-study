@@ -69,6 +69,32 @@ def test_counts_ignore_when_each_variable_is_live():
                             "weighted": 7.0}
 
 
+def _f(name, kind, first, last, frm=(), defs=1):
+    return _v(name, kind, first, last, defs=defs) + [list(frm)]
+
+
+def test_flow_traces_what_enters_to_the_internal_calls_it_reaches():
+    # 0 p (param) -> 2 x = p + 1 -> call g(x) at line 3, internal
+    # 1 q (param), used only locally: caught
+    # 3 f (field) passed as it came to h(f) at line 4, internal: a pipe strand
+    # 4 r = g(x) holds an internal call's result; k(r) at line 5 resolves to the JDK
+    vars_ = [_f("p", lw.PARAM, 2, 2), _f("q", lw.PARAM, 2, 2), _f("x", lw.LOCAL, 2, 3, [0]),
+             _f("f", lw.FIELD, 4, 4), _f("r", lw.LOCAL, 3, 5, [2])]
+    calls = [[3, [2], [], 4], [4, [3], [], -1], [5, [4], [], -1]]
+    m = _method(vars_, [1, 2, 3, 4, 5]) | {"calls": calls}
+    fl = lw.flow(m, [True, True, False])
+    assert fl["in_params"] == 2 and fl["in_fields"] == 1 and fl["in_results"] == 1
+    assert fl["in_all"] == 4
+    assert fl["in_out"] == 2                 # p (through x) and f; q and r reach no internal call
+    assert fl["in_caught"] == 2
+    assert fl["in_through"] == 1             # f
+    assert fl["out_vars"] == 2 and fl["max_fanout"] == 1
+    assert fl["max_from"] == 1 and fl["derived"] == 2
+    assert fl["bridging"] == 1               # r is live at lines 3 and 4, both internal calls
+    # with every call internal, r reaches k(r) too
+    assert lw.flow(m, [True, True, True])["in_out"] == 3
+
+
 def test_an_empty_method_is_zero():
     s = lw.summary(_method([], []), lw.HEADLINE)
     assert s["max"] == 0 and s["peak_line"] is None

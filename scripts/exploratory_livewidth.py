@@ -8,7 +8,11 @@ beyond length adding to it. This reads whether what a reader must hold at once d
 width of scripts/livewidth.py (its facts in results/exploratory/livewidth/<set>/, measured by
 that script first), in every variant, against length, tokens and length x [internal call >= 1];
 and whether the plain count of the method's variables does, without regard to when each is live
-(every form is also paired against that count, so a width that only counts variables shows).
+(every form is also paired against that count, so a width that only counts variables shows);
+and how data moves through the method (scripts/livewidth.py, FLOW): how many variables enter it
+(parameters, fields, the results of internal calls), how many variables go into computing one,
+whether what enters flows on into the method's fan-out (its internal calls, the measurer's
+resolution call for call), and the state held across calls.
 
 Each form is read two ways:
 
@@ -29,11 +33,19 @@ methods, the sum of their areas and the largest variable count, beside the ranki
 
 Writes results/exploratory/livewidth.<utc>.json (with its sha256) and prints the tables. A
 repository without live-width facts is left out and counted, never scored as zeros.
+
+Beside it, results/exploratory/livewidth-units.<utc>.csv.gz (with its sha256): one row per
+method in a human oracle's universe (MLCQ's reviewed methods), with its set, repository key,
+half, unit, label, whether the pass had facts for it, and every method form raw and as its
+modified z within its repository (fitted on every unit there, as the registered rule fits it).
+It is small enough to commit, so the reviewed units can be analysed further without the records.
 """
 from __future__ import annotations
 
 import argparse
+import csv
 import datetime as dt
+import gzip
 import hashlib
 import json
 import os
@@ -96,6 +108,30 @@ def method_widths(facts: dict, ml: units.Level) -> tuple[dict, int]:
     return out, missing
 
 
+def method_flows(facts: dict, rec: dict, ml: units.Level) -> tuple[dict, int]:
+    """{form name: values over ml.ids} of every FLOW measure, and how many units were left at
+    zero because their calls did not align with the measurer record's (the same count of calls,
+    in the same order, is required to take each call's resolution)."""
+    by = lw.by_unit(facts)
+    jp = {}
+    for path, ms in units._measurer_files(rec["javaparser"]).items():
+        for m, _ in ms:
+            jp.setdefault((path, m["name"], m["name_line"]), m)
+    out = {f"flow {k}": np.zeros(ml.n) for k in lw.FLOW}
+    misaligned = 0
+    for i, uid in enumerate(ml.ids):
+        key = units._uid_parts(uid)
+        m, r = by.get(key), jp.get(key)
+        if m is None or r is None:
+            continue
+        if len(r["calls"]) != len(m.get("calls", [])):
+            misaligned += 1
+            continue
+        for k, x in lw.flow(m, [c[2] == er.I for c in r["calls"]]).items():
+            out[f"flow {k}"][i] = x
+    return out, misaligned
+
+
 def method_forms(ml: units.Level, mc: dict, w: dict) -> dict:
     base = er.method_forms(ml, mc)
     gate = (mc["calls_all"] >= 1).astype(float)
@@ -117,7 +153,9 @@ def thresholds(name: str) -> list[tuple[str, float]]:
         return []
     if name.startswith(("lw max", "MaxLive", "max_m lw max")):
         return [(f">={k}", float(k)) for k in WIDTH_K]
-    if name.startswith(("vars count", "max_m vars count")):
+    if name in ("flow lw_at_calls",):
+        return [(f">={k}", float(k)) for k in WIDTH_K]
+    if name.startswith(("vars count", "max_m vars count", "flow ", "max_m flow ")):
         return [(f">={k}", float(k)) for k in COUNT_K]
     if name in ("nloc", "nloc_max"):
         return [(f">={n}", float(n)) for n in NLOC_N]
@@ -131,27 +169,36 @@ def class_forms(cl: units.Level, ml: units.Level, mc: dict, w: dict) -> dict:
     top = np.zeros(cl.n)
     area = np.zeros(cl.n)
     most = np.zeros(cl.n)
+    bridging = np.zeros(cl.n)
+    entering = np.zeros(cl.n)
     for j, p in enumerate(ml.c["file"]):
         if p in fidx:
             c = fidx[p]
             top[c] = max(top[c], w[f"lw max {H}"][j])
             area[c] += w[f"lw area {H}"][j]
             most[c] = max(most[c], w[COUNT][j])
+            bridging[c] = max(bridging[c], w["flow bridging"][j])
+            entering[c] = max(entering[c], w["flow in_all"][j])
     keep[f"max_m lw max {H}"] = top
     keep[f"sum_m lw area {H}"] = area
     keep[f"max_m {COUNT}"] = most
+    keep["max_m flow bridging"] = bridging
+    keep["max_m flow in_all"] = entering
     keep[f"nloc_sum x [max_m lw max {H} >= 7]"] = f["nloc_sum"] * (top >= 7)
     return keep
 
 
-def score_set(set_name: str) -> tuple[dict, dict]:
+def score_set(set_name: str) -> tuple[dict, dict, list]:
     """{(halves, level, oracle): {'keys', 'forms', 'rules': {form: [rule]}, 'counts': {form:
-    [repo][rule][4]}, 'pairs': [(nloc, width)] over the universe}} and the coverage counts."""
+    [repo][rule][4]}, 'pairs': [(nloc, width)] over the universe}}, the coverage counts, and the
+    extract's rows (method level, human oracles)."""
     results = os.path.join(pins.RESULTS, set_name)
     rows = records.load_rows(results)
     out: dict = {}
-    cover = {"records": 0, "no_facts": 0, "units": 0, "units_without_facts": 0, "unit_mismatch": 0}
+    cover = {"records": 0, "no_facts": 0, "units": 0, "units_without_facts": 0, "unit_mismatch": 0,
+             "flow_misaligned": 0}
     wanted = [(h, lvl, o) for s, h, lvl, o in er.POPULATIONS if s == set_name]
+    extract: list = []
     for k, r in enumerate(rows):
         if r.get("error") or r.get("javaparser_error") or not p1.is_usable(r):
             continue
@@ -161,16 +208,25 @@ def score_set(set_name: str) -> tuple[dict, dict]:
             cover["no_facts"] += 1
             continue
         lwrec = records.read_json_gz(fpath)
+        if lwrec["facts"].get("livewidth") != lw.SCHEMA:
+            cover["no_facts"] += 1      # an older schema's facts: measure again (scripts/livewidth.py)
+            continue
         cover["unit_mismatch"] += lwrec["check"]["missing"] + lwrec["check"]["extra"]
         rec = records.read_json_gz(records.record_path(results, r["key"]))
         built = units.joined(rec)
         ml, cl = built["method"], built["class"]
         mc = er.method_calls(rec, ml)
         w, missing = method_widths(lwrec["facts"], ml)
+        fl, misaligned = method_flows(lwrec["facts"], rec, ml)
+        w.update(fl)
+        cover["flow_misaligned"] += misaligned
         cover["units"] += ml.n
         cover["units_without_facts"] += missing
         forms = {"method": method_forms(ml, mc, w), "class": class_forms(cl, ml, mc, w)}
         levels = {"method": ml, "class": cl}
+        by = lw.by_unit(lwrec["facts"])
+        has = [units._uid_parts(u) in by for u in ml.ids]
+        z = None
         for halves, lvl, oracle in wanted:
             if halves is not None and r.get("half") not in halves:
                 continue
@@ -189,6 +245,14 @@ def score_set(set_name: str) -> tuple[dict, dict]:
                 masks = [rules.mad_z(vals)] + [vals >= c for _, c in thresholds(name)]
                 slot["counts"][name].append([er.cells(m, pos, univ) for m in masks])
             slot["keys"].append(r["key"])
+            if lvl == "method" and oracle.startswith("human_"):
+                if z is None:
+                    z = {n: rules.mad_z_scale(np.asarray(v, float))[1] for n, v in forms["method"].items()}
+                for i in np.flatnonzero(univ):
+                    extract.append([set_name, r["key"], r.get("half"), oracle, ml.ids[i], int(pos[i]),
+                                    int(has[i])]
+                                   + [x for n, v in forms["method"].items()
+                                      for x in (float(v[i]), round(float(z[n][i]), 4))])
             size = ml.values["nloc"] if lvl == "method" else cl.values["nloc_max"]
             width = forms[lvl][f"lw max {H}" if lvl == "method" else f"max_m lw max {H}"]
             slot["pairs"].extend(zip(size[univ].tolist(), width[univ].tolist()))
@@ -196,7 +260,7 @@ def score_set(set_name: str) -> tuple[dict, dict]:
             print(f"  {set_name}: {k + 1}/{len(rows)} records", file=sys.stderr)
     for slot in out.values():
         slot["counts"] = {n: np.array(c, dtype=np.int64) for n, c in slot["counts"].items()}
-    return out, cover
+    return out, cover, extract
 
 
 def spearman(pairs: list) -> float | None:
@@ -310,9 +374,15 @@ def main(argv=None) -> int:
     out = {"kind": "exploratory", "made_utc": stamp, "harness_commit": pins.harness_commit(),
            "note": __doc__.splitlines()[0], "headline_variant": H, "coverage": {},
            "populations": [], "held_out": {}}
+    extract, header = [], None
     for s in a.sets:
         print(f"scoring {s} ...", file=sys.stderr)
-        scored, cover = score_set(s)
+        scored, cover, rows = score_set(s)
+        extract += rows
+        for (h, lvl, o), slot in scored.items():
+            if lvl == "method" and header is None:
+                header = ["set", "key", "half", "oracle", "unit", "label", "facts"] + [
+                    x for n in slot["forms"] for x in (n, f"z:{n}")]
         out["coverage"][s] = cover
         print(f"\n{s}: {cover}")
         for key, slot in scored.items():
@@ -325,10 +395,19 @@ def main(argv=None) -> int:
     path = a.out or os.path.join(pins.RESULTS, "exploratory", f"livewidth.{stamp}.json")
     with open(path, "w") as fh:
         json.dump(out, fh, indent=1, default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o))
-    digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
-    with open(path + ".sha256", "w") as fh:
-        fh.write(f"{digest}  {os.path.basename(path)}\n")
-    print(f"\nwrote {path}  (exploratory; not part of the plan)")
+    paths = [path]
+    if extract and header:
+        upath = os.path.join(os.path.dirname(path), f"livewidth-units.{stamp}.csv.gz")
+        with gzip.open(upath, "wt", encoding="utf-8", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(header)
+            w.writerows(extract)
+        paths.append(upath)
+    for p in paths:
+        digest = hashlib.sha256(open(p, "rb").read()).hexdigest()
+        with open(p + ".sha256", "w") as fh:
+            fh.write(f"{digest}  {os.path.basename(p)}\n")
+        print(f"\nwrote {p}  (exploratory; not part of the plan)")
     return 0
 
 

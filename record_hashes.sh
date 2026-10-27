@@ -33,7 +33,7 @@ trap 'rm -f "$TMP"' EXIT
   echo "# Amendments, 9 and 10);"
   echo "# analysis.exploratory.*.json are later re-analyses."
   for f in results/analysis.json results/analysis.v*.json results/analysis.exploratory.*.json \
-           results/exploratory/ranking.*.json results/exploratory/log-matrix.*.json results/exploratory/matched.*.json results/exploratory/reviewers.*.json results/exploratory/livewidth.*.json decisions/*.json \
+           results/exploratory/ranking.*.json results/exploratory/log-matrix.*.json results/exploratory/matched.*.json results/exploratory/reviewers.*.json results/exploratory/livewidth.*.json results/exploratory/livewidth-units.*.csv.gz decisions/*.json \
            labels/MLCQCodeSmellSamples.csv labels/mlcq-*.csv labels/mlcq-*.json labels/fontana-*.csv \
            sample/* results/*/run.json results/*/validation.json; do
     [ -f "$f" ] && sha256sum "$f"

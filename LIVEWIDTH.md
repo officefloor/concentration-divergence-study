@@ -73,6 +73,42 @@ variables, the comparison shows it: overlap adds nothing over the number.
 The headline variant is `[loop,role,all]`. Step 13 reads every variant and ranks none of them in
 advance.
 
+### Data flow, and whether it reaches the fan-out
+
+This part ties variables to [`SINEW.md`](SINEW.md)'s coupling. Coupling counts what crosses the
+method's boundary: parameters in, call arguments out. Variables are what carries that data
+across the body.
+
+The pass records two more kinds of fact:
+
+- **For each variable:** the other variables its definitions are computed from.
+- **For each call:** the variables in its arguments, the variable it is called on, and the
+  variable that holds its result.
+
+Calls come in the measurer's order, so the i-th call takes the measurer record's resolution.
+Only internal calls count as fan-out: those that resolve to an analysed file, the sinew. A
+method whose call count differs from the record's is left at zero and counted.
+
+From those facts:
+
+| Measure | What it asks |
+|---|---|
+| `in_params`, `in_fields`, `in_results`, `in_all` | How many variables come into the method: parameters, fields, and the results of internal calls |
+| `max_from`, `derived` | How many variables go into computing one variable, at most; how many variables are computed from others |
+| `out_vars`, `max_fanout` | How many variables are passed to internal calls; the most internal calls one variable goes to |
+| `in_out`, `in_caught` | Of what comes in, how much flows on to an internal call, directly or through what is computed from it, and how much stops here |
+| `in_through` | Parameters and fields passed to an internal call unchanged: a pipe strand, data the method only threads on |
+| `bridging` | Variables live at two or more internal-call lines: state held across calls, so the method glues its callees together |
+| `lw_at_calls` | The headline width at the lines with an internal call: how much is held when control is handed off |
+
+The hypothesis behind `bridging` is what may explain the earlier finding:
+
+- In a pipeline (`a = f(x); b = g(a); h(b)`), each result is passed straight on, so about one
+  variable is held across calls at a time.
+- A god method holds many results while it calls around.
+- If that is so, "length × [makes a call]" works because the call gate stands in for this
+  orchestration, and `bridging` measures it directly.
+
 ## Prior measures, and the gap each leaves
 
 | Measure | What it computes | Gap |
@@ -147,6 +183,12 @@ Live width is that combination: lifetime and mutation together, read at the hard
 - **Ranges are measured in lines,** so several statements on one line share a line.
 - **Weyuker's properties.** A maximum is not additive, and probably fails property 9 that
   DepDegree satisfies.
+- **Data flow is syntactic.**
+  - A variable is computed from every variable referenced in its right-hand side. Branches and
+    the order of definitions are not separated.
+  - A lambda's body flows into the variable it is assigned to.
+  - Data written into an object through a call (`list.add(x)`) reaches the list only as that
+    call's argument, not as a definition of `list`.
 
 ## How it is read (step 13)
 
@@ -173,6 +215,20 @@ Step 13 runs in two parts:
    Class level reads the widest method of a class. The forms "length counts only beyond the
    span" (nloc × [width ≥ k]) and width × [internal call ≥ 1] test whether width explains the
    call gate.
+
+**What to commit.** The raw records and the live-width facts stay out of git: they are many GB
+and hundreds of MB. Two outputs are small enough to commit:
+
+- the summary, `results/exploratory/livewidth.<utc>.json`;
+- the extract, `results/exploratory/livewidth-units.<utc>.csv.gz`. It has one row per
+  MLCQ-reviewed method, with its label and every method form, raw and as its modified z within
+  its repository.
+
+The extract lets the reviewed methods be analysed further without the records:
+
+```
+git add -f results/exploratory/*.json results/exploratory/*.csv.gz results/exploratory/*.sha256
+```
 
 **A note on the halves.** The confirm half was already read for the other measures in steps
 9–12. Choosing the cutoff on explore and reading it on confirm keeps this measure's own choice

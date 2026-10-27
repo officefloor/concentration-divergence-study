@@ -11,8 +11,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
@@ -37,10 +39,13 @@ import com.github.javaparser.ast.expr.CharLiteralExpr;
 import com.github.javaparser.ast.expr.DoubleLiteralExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
+import com.github.javaparser.ast.expr.InstanceOfExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LambdaExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
+import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.expr.ThisExpr;
 import com.github.javaparser.ast.expr.TypePatternExpr;
@@ -48,6 +53,7 @@ import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.stmt.CatchClause;
 import com.github.javaparser.ast.stmt.DoStmt;
+import com.github.javaparser.ast.stmt.ExplicitConstructorInvocationStmt;
 import com.github.javaparser.ast.stmt.ForEachStmt;
 import com.github.javaparser.ast.stmt.ForStmt;
 import com.github.javaparser.ast.stmt.Statement;
@@ -88,6 +94,16 @@ import com.github.javaparser.ast.stmt.WhileStmt;
  * <li><b>Loops:</b> for each variable, the extent it is live over when control flow is followed
  * this far: a variable declared outside a loop and referenced inside it is live over the whole
  * loop (the back edge), so its range is widened to cover it.</li>
+ * <li><b>Data flow</b> ({@code from}): the other variables any definition of a variable is
+ * computed from (those referenced in an initializer, an assigned value, a for-each iterable, the
+ * expression a pattern tests, or a value written into it), so a variable's value can be traced
+ * back to what entered the method.</li>
+ * <li><b>Calls:</b> every call the measurer counts (method calls, {@code new}, explicit
+ * {@code this(...)}/{@code super(...)}), in the measurer's order, so the i-th call here is the
+ * i-th call of the measurer's record and takes its resolution from there. Per call: its line, the
+ * variables referenced in its arguments, the variable it is called on (a simple name or
+ * {@code this.x} as the receiver), and the variable whose definition it is part of, if any
+ * (the call's result flows into it).</li>
  * </ul>
  */
 public final class LiveWidth {
@@ -95,7 +111,7 @@ public final class LiveWidth {
 	static final int PARAM = 0, LOCAL = 1, FIELD = 2;
 
 	/** The facts schema, bumped with any change to the rules above. */
-	static final int SCHEMA = 1;
+	static final int SCHEMA = 2;
 
 	static final Pattern UPPER = Pattern.compile("^[A-Z].*");
 
@@ -107,6 +123,8 @@ public final class LiveWidth {
 		/** Where the declaration is, for the declared-before rule (0 for a parameter or field). */
 		final int declLine, declCol;
 		final List<Node> refs = new ArrayList<>();
+		/** The variables its definitions are computed from (identity, in order met). */
+		final Set<Var> from = new LinkedHashSet<>();
 		int first = Integer.MAX_VALUE, last = -1, defs, steps, muts;
 
 		Var(int kind, String name, Node scope, Node at, int defs) {
@@ -133,6 +151,13 @@ public final class LiveWidth {
 		final List<Var> vars = new ArrayList<>();
 		final List<int[]> loopRanges = new ArrayList<>();
 		final Map<Var, int[]> loopExtent = new IdentityHashMap<>();
+		final List<CallFacts> calls = new ArrayList<>();
+	}
+
+	static final class CallFacts {
+		int line;
+		Set<Var> args = new LinkedHashSet<>(), receiver = new LinkedHashSet<>();
+		Var result;
 	}
 
 	static final class FileFacts {
@@ -258,6 +283,7 @@ public final class LiveWidth {
 
 		// declarations, each with the node it is visible in
 		List<Var> locals = new ArrayList<>();
+		Map<Node, Var> declared = new IdentityHashMap<>();
 		for (Parameter p : params) {
 			locals.add(new Var(PARAM, p.getNameAsString(), decl, null, 1));
 		}
@@ -272,6 +298,7 @@ public final class LiveWidth {
 					v.ref(vd.getName());
 				}
 				locals.add(v);
+				declared.put(vd, v);
 			} else if (n instanceof Parameter p) {
 				Node owner = p.getParentNode().orElse(null);
 				if (owner instanceof CatchClause || owner instanceof LambdaExpr) {
@@ -281,11 +308,13 @@ public final class LiveWidth {
 				Var v = new Var(LOCAL, tp.getNameAsString(), patternScope(tp), tp.getName(), 1);
 				v.ref(tp.getName());
 				locals.add(v);
+				declared.put(tp, v);
 			}
 		}
 
 		// references, matched to the innermost declaration in scope
 		Map<String, Var> fields = new LinkedHashMap<>();
+		Map<Node, Var> refOf = new IdentityHashMap<>();
 		for (Node n : own) {
 			Var v = null;
 			if (n instanceof NameExpr ne) {
@@ -297,9 +326,11 @@ public final class LiveWidth {
 					v = fields.computeIfAbsent(ne.getNameAsString(), k -> new Var(FIELD, k, null, null, 1));
 				}
 				v.ref(ne);
+				refOf.put(ne, v);
 			} else if (n instanceof FieldAccessExpr fa && fa.getScope() instanceof ThisExpr) {
 				v = fields.computeIfAbsent(fa.getNameAsString(), k -> new Var(FIELD, k, null, null, 1));
 				v.ref(fa);
+				refOf.put(fa, v);
 			}
 		}
 
@@ -323,8 +354,12 @@ public final class LiveWidth {
 			}
 			boolean inUpdate = n.findAncestor(ForStmt.class)
 					.map(fs -> fs.getUpdate().stream().anyMatch(u -> within(u, n))).orElse(false);
+			Expression value = n instanceof AssignExpr ae ? ae.getValue() : null;
 			Var rebound = varOf(target, locals, fields);
 			if (rebound != null) {
+				if (value != null) {
+					flowInto(rebound, value, refOf);
+				}
 				rebound.defs++;
 				if (step || inUpdate) {
 					rebound.steps++;
@@ -337,9 +372,51 @@ public final class LiveWidth {
 				Var into = varOf(base, locals, fields);
 				if (into != null) {
 					into.muts++;
+					if (value != null) {
+						flowInto(into, value, refOf);
+					}
 					break;
 				}
 			}
+		}
+
+		// what the bindings are computed from
+		for (Map.Entry<Node, Var> e : declared.entrySet()) {
+			Node d = e.getKey();
+			if (d instanceof VariableDeclarator vd) {
+				vd.getInitializer().ifPresent(init -> flowInto(e.getValue(), init, refOf));
+				if (vd.getParentNode().flatMap(Node::getParentNode).orElse(null) instanceof ForEachStmt fe) {
+					flowInto(e.getValue(), fe.getIterable(), refOf);
+				}
+			} else if (d.getParentNode().orElse(null) instanceof InstanceOfExpr io) {
+				flowInto(e.getValue(), io.getExpression(), refOf);
+			}
+		}
+
+		// the calls, in the measurer's order
+		for (Node n : own) {
+			NodeList<Expression> args;
+			Expression scope = null;
+			if (n instanceof MethodCallExpr mce) {
+				args = mce.getArguments();
+				scope = mce.getScope().orElse(null);
+			} else if (n instanceof ObjectCreationExpr oce) {
+				args = oce.getArguments();
+			} else if (n instanceof ExplicitConstructorInvocationStmt ecis) {
+				args = ecis.getArguments();
+			} else {
+				continue;
+			}
+			CallFacts c = new CallFacts();
+			c.line = line(n);
+			for (Expression a : args) {
+				collect(a, refOf, c.args);
+			}
+			if (scope != null && refOf.containsKey(scope)) {
+				c.receiver.add(refOf.get(scope));
+			}
+			c.result = resultOf(n, declared, locals, fields);
+			m.calls.add(c);
 		}
 
 		for (Var v : locals) {
@@ -378,6 +455,47 @@ public final class LiveWidth {
 			m.loopExtent.put(v, new int[] { lo, hi });
 		}
 		return m;
+	}
+
+	/** The variables referenced in an expression (nested type bodies excluded). */
+	static void collect(Node n, Map<Node, Var> refOf, Set<Var> out) {
+		Var v = refOf.get(n);
+		if (v != null) {
+			out.add(v);
+		}
+		for (Node c : n.getChildNodes()) {
+			if (!Measurer.isNestedTypePart(n, c)) {
+				collect(c, refOf, out);
+			}
+		}
+	}
+
+	/** The variables an expression references flow into {@code into} (itself excluded). */
+	static void flowInto(Var into, Expression value, Map<Node, Var> refOf) {
+		Set<Var> vs = new LinkedHashSet<>();
+		collect(value, refOf, vs);
+		vs.remove(into);
+		into.from.addAll(vs);
+	}
+
+	/**
+	 * The variable a call's result flows into: the declarator whose initializer, or the
+	 * assignment whose value, holds the call, up to the call's statement or lambda.
+	 */
+	static Var resultOf(Node call, Map<Node, Var> declared, List<Var> locals, Map<String, Var> fields) {
+		Node child = call;
+		Node p = call.getParentNode().orElse(null);
+		while (p != null && !(p instanceof Statement) && !(p instanceof LambdaExpr)) {
+			if (p instanceof VariableDeclarator vd && vd.getInitializer().orElse(null) == child) {
+				return declared.get(vd);
+			}
+			if (p instanceof AssignExpr ae && ae.getValue() == child) {
+				return varOf(ae.getTarget(), locals, fields);
+			}
+			child = p;
+			p = p.getParentNode().orElse(null);
+		}
+		return null;
 	}
 
 	/** The node a pattern variable is visible in: the switch entry, or the block of its statement. */
@@ -450,8 +568,20 @@ public final class LiveWidth {
 	 * Writes {"livewidth": SCHEMA, "javaparser", "seconds", "files": [{"path", "level", "problem",
 	 * "methods": [{"name", "decl_line", "name_line", "end_line", "lines": [code lines], "loops":
 	 * [[begin, end]], "vars": [[name, kind, first, last, loop_first, loop_last, defs, steps,
-	 * muts]]}]}]}.
+	 * muts, [from: variable indices]]], "calls": [[line, [argument variable indices], [receiver
+	 * variable indices], result variable index or -1]]}]}]}.
 	 */
+	static String indices(Set<Var> vs, Map<Var, Integer> index) {
+		StringBuilder b = new StringBuilder("[");
+		for (Var v : vs) {
+			Integer i = index.get(v);
+			if (i != null) {
+				b.append(b.length() > 1 ? "," : "").append(i);
+			}
+		}
+		return b.append(']').toString();
+	}
+
 	static void write(Path out, List<FileFacts> recs, double seconds) throws IOException {
 		Path tmp = out.resolveSibling(out.getFileName() + ".part");
 		try (Writer w = new BufferedWriter(
@@ -486,13 +616,24 @@ public final class LiveWidth {
 						w.write((j > 0 ? "," : "") + "[" + r[0] + "," + r[1] + "]");
 					}
 					w.write("],\"vars\":[");
+					Map<Var, Integer> index = new IdentityHashMap<>();
+					for (int j = 0; j < m.vars.size(); j++) {
+						index.put(m.vars.get(j), j);
+					}
 					for (int j = 0; j < m.vars.size(); j++) {
 						Var v = m.vars.get(j);
 						int[] e = m.loopExtent.get(v);
 						w.write(j > 0 ? ",[" : "[");
 						Measurer.str(w, v.name);
 						w.write("," + v.kind + "," + v.first + "," + v.last + "," + e[0] + "," + e[1] + "," + v.defs
-								+ "," + v.steps + "," + v.muts + "]");
+								+ "," + v.steps + "," + v.muts + "," + indices(v.from, index) + "]");
+					}
+					w.write("],\"calls\":[");
+					for (int j = 0; j < m.calls.size(); j++) {
+						CallFacts c = m.calls.get(j);
+						Integer r = c.result == null ? null : index.get(c.result);
+						w.write((j > 0 ? ",[" : "[") + c.line + "," + indices(c.args, index) + ","
+								+ indices(c.receiver, index) + "," + (r == null ? -1 : r) + "]");
 					}
 					w.write("]}");
 				}
