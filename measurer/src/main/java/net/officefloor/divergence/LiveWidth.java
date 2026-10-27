@@ -118,8 +118,8 @@ public final class LiveWidth {
 	static final class Var {
 		final int kind;
 		final String name;
-		/** The node the declaration is visible in (null for a field). */
-		final Node scope;
+		/** The node the declaration is visible in (null for a field; released once measured). */
+		Node scope;
 		/** Where the declaration is, for the declared-before rule (0 for a parameter or field). */
 		final int declLine, declCol;
 		final List<Node> refs = new ArrayList<>();
@@ -141,6 +141,17 @@ public final class LiveWidth {
 			refs.add(n);
 			first = Math.min(first, line);
 			last = Math.max(last, line);
+		}
+
+		/**
+		 * Drop the parse-tree nodes once the method's facts are computed: a node reaches its
+		 * whole compilation unit through its parent, and the facts of every file are held until
+		 * they are written, so keeping them kept every file's tree alive (heap exhausted on a
+		 * repository of 15,000+ files).
+		 */
+		void release() {
+			refs.clear();
+			scope = null;
 		}
 	}
 
@@ -233,6 +244,11 @@ public final class LiveWidth {
 				MethodFacts m = new MethodFacts();
 				m.name = "(failed) " + e.getClass().getSimpleName();
 				rec.methods.add(m);
+			}
+		}
+		for (MethodFacts m : rec.methods) {
+			for (Var v : m.vars) {
+				v.release();
 			}
 		}
 		return rec;
