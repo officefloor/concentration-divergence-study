@@ -38,4 +38,5 @@ if [ "$MODE" != "--check" ]; then
   ./record_hashes.sh
   echo
   echo "=== STEP 8 complete. Commit analysis-hashes.txt. ==="
+  echo "The post hoc exploration follows: ./step9_explore_ranking.sh to ./step13_explore_livewidth.sh (README)."
 fi

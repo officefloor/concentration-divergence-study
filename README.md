@@ -31,6 +31,19 @@ before step 6, which records where they came from and their hashes.
 ./step8_analyse.sh        # the confirmatory analysis, once -> results/analysis.json ; ./record_hashes.sh
 ```
 
+The exploration made after every oracle had been read (PLAN.md, Amendments, 10) follows, one
+step per post hoc analysis, in the order it was done. None of it is confirmatory: each writes
+`results/exploratory/<name>.<utc>.json` (`kind: exploratory`, its sha256 beside it) and ends with
+`./record_hashes.sh`.
+
+```
+./step9_explore_ranking.sh     # size x calls and the leaf gate (scripts/exploratory_ranking.py)
+./step10_explore_matched.sh    # AUC and matched flag rate (scripts/exploratory_matched.py)
+./step11_explore_log_matrix.sh # the registered matrix on a log scale (scripts/exploratory_log_matrix.py)
+./step12_explore_reviewers.sh  # MLCQ's individual reviews (scripts/exploratory_reviewers.py)
+./step13_explore_livewidth.sh  # live width (LIVEWIDTH.md): re-fetches every repository, then scores
+```
+
 Needs python3 (3.10+), git, Java 17+, Maven 3 and, for step 3, the GitHub CLI authenticated.
 The measurer runs with a 9 GB heap (`CDS_MEASURER_HEAP`, `pins.py`), so a machine of 14 GB or
 more; with less, the largest repositories can spend their time budget in garbage collection
