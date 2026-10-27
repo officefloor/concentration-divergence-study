@@ -59,6 +59,16 @@ def test_fields_count_only_in_the_all_scope():
     assert lw.summary(m, ("text", "unit", "all", "use"))["max"] == 2
 
 
+def test_counts_ignore_when_each_variable_is_live():
+    # the long sequence: 58 variables, never more than 2 at once
+    seq = _method([_v(f"x{i}", lw.LOCAL, i, i + 1) for i in range(2, 60)], list(range(1, 62)))
+    assert lw.counts(seq)["all"] == 58
+    m = _method([_v("p", lw.PARAM, 1, 1), _v("i", lw.LOCAL, 1, 1, defs=2, steps=1),
+                 _v("sum", lw.LOCAL, 1, 1, defs=3), _v("f", lw.FIELD, 1, 1, defs=2)], [1])
+    assert lw.counts(m) == {"all": 4, "locals": 3, "params": 1, "fields": 1, "reassigned": 2,
+                            "weighted": 7.0}
+
+
 def test_an_empty_method_is_zero():
     s = lw.summary(_method([], []), lw.HEADLINE)
     assert s["max"] == 0 and s["peak_line"] is None

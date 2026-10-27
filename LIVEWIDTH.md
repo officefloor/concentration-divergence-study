@@ -58,6 +58,18 @@ The facts it records:
   - `area`: the sum of widths over the code lines.
   - `over k`: the number of code lines wider than k.
 
+Beside the widths, the same facts give **plain counts** of the variables a method references,
+with no regard to when each is live:
+
+- all of them, and parameters with locals;
+- by kind (parameters, fields);
+- how many are reassigned beyond a step;
+- the sum of their role weights, which is the width the method would have if every variable
+  were live at once.
+
+Every form is also paired against the count of all variables. So if a width only ever counts
+variables, the comparison shows it: overlap adds nothing over the number.
+
 The headline variant is `[loop,role,all]`. Step 13 reads every variant and ranks none of them in
 advance.
 
@@ -153,7 +165,8 @@ Step 13 runs in two parts:
    every variant against length, tokens, and length × [internal call ≥ 1], two ways:
    - **Outlier:** the registered rule (modified z ≥ 3.5 per repository), with the paired
      bootstrap.
-   - **Threshold:** absolute cutoffs (width ≥ k for k = 2…12; for length, nloc ≥ n). On MLCQ
+   - **Threshold:** absolute cutoffs (width ≥ k for k = 2…12; variable count ≥ k for
+     k = 3…20; for length, nloc ≥ n). On MLCQ
      the cutoff is chosen on the explore half and read once on the confirm half, against
      length's cutoff chosen the same way.
 

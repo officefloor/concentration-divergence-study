@@ -6,7 +6,9 @@ prints is confirmatory; it changes no verdict. The earlier exploration found len
 "makes at least one internal call", the best method-level form, with nothing about complexity
 beyond length adding to it. This reads whether what a reader must hold at once does: the live
 width of scripts/livewidth.py (its facts in results/exploratory/livewidth/<set>/, measured by
-that script first), in every variant, against length, tokens and length x [internal call >= 1].
+that script first), in every variant, against length, tokens and length x [internal call >= 1];
+and whether the plain count of the method's variables does, without regard to when each is live
+(every form is also paired against that count, so a width that only counts variables shows).
 
 Each form is read two ways:
 
@@ -14,12 +16,13 @@ Each form is read two ways:
              pooled MCC with the paired bootstrap against the competitors (2000 resamples over
              repositories, seed 12345), as scripts/exploratory_ranking.py reads it;
   threshold  an absolute cutoff, the same for every repository: a width of k or more (k = 2..12,
-             around the 4 +- 1 and 7 +- 2 spans) and, for length, nloc of n or more. On MLCQ the
+             around the 4 +- 1 and 7 +- 2 spans), a count of k variables or more, and, for
+             length, nloc of n or more. On MLCQ the
              cutoff is chosen on the explore half (the best pooled MCC) and read once on the
              confirm half, against length's cutoff chosen the same way.
 
 Class level (Blob, Fontana, the seed-3 tool oracles) reads the largest live width of the class's
-methods and the sum of their areas, beside the ranking script's class competitors.
+methods, the sum of their areas and the largest variable count, beside the ranking script's class competitors.
 
     .venv/bin/python scripts/exploratory_livewidth.py                 # every set
     .venv/bin/python scripts/exploratory_livewidth.py --sets mlcq
@@ -50,17 +53,19 @@ import livewidth as lw  # noqa: E402
 H = lw.label(lw.HEADLINE)
 WIDTH_K = tuple(range(2, 13))
 NLOC_N = (10, 15, 20, 26, 30, 40, 50, 75, 100)
+COUNT_K = (3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20)
+COUNT = "vars count [all]"
 SIZE_CALLS = "nloc x [internal call >= 1]"
 # the competitors every method form is read against (exploratory_ranking's, and its best form)
-METHOD_COMPETITORS = {"size_calls": SIZE_CALLS, "size": "nloc", "complexity": "tokens"}
+METHOD_COMPETITORS = {"size_calls": SIZE_CALLS, "size": "nloc", "complexity": "tokens", "count": COUNT}
 CLASS_COMPETITORS = er.COMPETITORS["class"]
 # per level, the length a held-out cutoff is read against, and the form by the registered rule
 HELD_OUT_REFS = {"method": ("nloc", SIZE_CALLS), "class": ("nloc_max", "nloc_max x nom")}
 
 
 def method_widths(facts: dict, ml: units.Level) -> tuple[dict, int]:
-    """{form name: values over ml.ids} of every live-width variant, and how many joined units
-    have no facts (zeros)."""
+    """{form name: values over ml.ids} of every live-width variant and variable count, and how
+    many joined units have no facts (zeros)."""
     by = lw.by_unit(facts)
     vs = lw.variants()
     n = ml.n
@@ -69,6 +74,8 @@ def method_widths(facts: dict, ml: units.Level) -> tuple[dict, int]:
     out["LV mean [text,unit,locals]  (Dunsmore & Gannon)"] = np.zeros(n)
     for name in ("mean", "area") + tuple(f"over{k}" for k in (4, 7)):
         out[f"lw {name} {H}"] = np.zeros(n)
+    for c in lw.COUNTS:
+        out[f"vars count [{c}]"] = np.zeros(n)
     missing = 0
     for i, uid in enumerate(ml.ids):
         m = by.get(units._uid_parts(uid))
@@ -84,6 +91,8 @@ def method_widths(facts: dict, ml: units.Level) -> tuple[dict, int]:
             if v == lw.HEADLINE:
                 for name in ("mean", "area", "over4", "over7"):
                     out[f"lw {name} {H}"][i] = s[name]
+        for c, x in lw.counts(m).items():
+            out[f"vars count [{c}]"][i] = x
     return out, missing
 
 
@@ -95,15 +104,21 @@ def method_forms(ml: units.Level, mc: dict, w: dict) -> dict:
     f.update(w)
     f[f"lw max {H} x [internal call >= 1]"] = top * gate
     f[f"lw area {H} x [internal call >= 1]"] = w[f"lw area {H}"] * gate
+    f[f"{COUNT} x [internal call >= 1]"] = w[COUNT] * gate
     for k in (4, 5, 7):
         f[f"nloc x [lw max {H} >= {k}]  (length beyond the span)"] = ml.values["nloc"] * (top >= k)
     return f
 
 
 def thresholds(name: str) -> list[tuple[str, float]]:
-    """The absolute cutoffs a form is read at: widths for a maximum width, lines for length."""
-    if name.startswith(("lw max", "MaxLive", "max_m lw max")) and " x " not in name:
+    """The absolute cutoffs a form is read at: widths for a maximum width, variables for a count,
+    lines for length."""
+    if " x " in name:
+        return []
+    if name.startswith(("lw max", "MaxLive", "max_m lw max")):
         return [(f">={k}", float(k)) for k in WIDTH_K]
+    if name.startswith(("vars count", "max_m vars count")):
+        return [(f">={k}", float(k)) for k in COUNT_K]
     if name in ("nloc", "nloc_max"):
         return [(f">={n}", float(n)) for n in NLOC_N]
     return []
@@ -115,13 +130,16 @@ def class_forms(cl: units.Level, ml: units.Level, mc: dict, w: dict) -> dict:
     fidx = {p: i for i, p in enumerate(cl.ids)}
     top = np.zeros(cl.n)
     area = np.zeros(cl.n)
+    most = np.zeros(cl.n)
     for j, p in enumerate(ml.c["file"]):
         if p in fidx:
             c = fidx[p]
             top[c] = max(top[c], w[f"lw max {H}"][j])
             area[c] += w[f"lw area {H}"][j]
+            most[c] = max(most[c], w[COUNT][j])
     keep[f"max_m lw max {H}"] = top
     keep[f"sum_m lw area {H}"] = area
+    keep[f"max_m {COUNT}"] = most
     keep[f"nloc_sum x [max_m lw max {H} >= 7]"] = f["nloc_sum"] * (top >= 7)
     return keep
 

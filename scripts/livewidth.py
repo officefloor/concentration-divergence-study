@@ -108,6 +108,23 @@ def summary(m: dict, variant: tuple) -> dict:
             **{f"over{k}": int((w > k).sum()) for k in OVER}}
 
 
+# The plain counts beside the widths: how many variables the method references, with no regard
+# to when they are live (all: parameters, locals and fields; locals: parameters and locals), by
+# kind, how many are reassigned beyond a step (role weight above 1), and the sum of the role
+# weights (the width the method would have if every variable were live at once).
+COUNTS = ("all", "locals", "params", "fields", "reassigned", "weighted")
+
+
+def counts(m: dict) -> dict:
+    vs = m["vars"]
+    return {"all": len(vs),
+            "locals": sum(v[KIND] in SCOPES["locals"] for v in vs),
+            "params": sum(v[KIND] == PARAM for v in vs),
+            "fields": sum(v[KIND] == FIELD for v in vs),
+            "reassigned": sum(weight(v, "role") > 1 for v in vs),
+            "weighted": float(sum(weight(v, "role") for v in vs))}
+
+
 def by_unit(doc: dict) -> dict:
     """{(path, name, name_line): method facts}, the first of a repeated key (as the join takes it)."""
     out = {}
