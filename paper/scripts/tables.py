@@ -24,6 +24,8 @@ import json
 import os
 import re
 import sys
+
+import numpy as np
 from collections import OrderedDict
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -137,6 +139,10 @@ def main() -> int:
                     help="the explore choices the analysis was made with")
     ap.add_argument("--ranking", default=None,
                     help="the exploratory ranking (default: the latest results/exploratory/ranking.*.json)")
+    ap.add_argument("--matched", default=None,
+                    help="the matched-rate and AUC read (default: the latest results/exploratory/matched.*.json)")
+    ap.add_argument("--log-matrix", default=None,
+                    help="the log-scale matrix (default: the latest results/exploratory/log-matrix.*.json)")
     args = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     A = load(args.analysis)
@@ -1091,6 +1097,173 @@ def main() -> int:
         M("expToolNpathCcGateMcc", mccs(rowsof((None, "method", "pmd_method_NPath200"))[0], "cc x [internal call >= 1]"))
         M("expToolBrainCogMcc", mccs(rowsof((None, "method", "brain_method"))[0], "cognitive"))
         M("expToolBrainCogGateMcc", mccs(rowsof((None, "method", "brain_method"))[0], "cognitive x [internal call >= 1]"))
+
+    # --- ranking or flag rate: the matched-rate and AUC read (scripts/exploratory_matched.py) ---
+    mk = args.matched or (sorted(glob.glob(os.path.join(ROOT, "results", "exploratory", "matched.*.json"))) or [None])[-1]
+    MR = json.load(open(mk)) if mk and os.path.exists(mk) else None
+    if MR:
+        M("matchedMadeUtc", MR["made_utc"][:8] + " " + MR["made_utc"][9:15] + " UTC")
+        shafile = mk + ".sha256"
+        M("matchedShaShort", open(shafile).read().split()[0][:12] if os.path.exists(shafile) else "n/a")
+        mpops = {(tuple(p["set_halves"]) if p["set_halves"] else None, p["level"], p["oracle"]): p for p in MR["populations"]}
+        def mrows(key):
+            p = mpops.get(key)
+            return ({r["form"]: r for r in p["rows"]}, p) if p else ({}, None)
+        CLASS_LABELS = {"X* = nloc_max": "X$^*$ = \\texttt{nloc\\_max}", "X*.D_flow (primary arm)": "X$^*\\cdot$D$_{\\text{flow}}$, the primary arm",
+                        "X*.E_flow (exemption only)": "X$^*\\cdot$E$_{\\text{flow}}$", "X*.A_flow (amplification only)": "X$^*\\cdot$A$_{\\text{flow}}$",
+                        "X*.N (size null)": "X$^*\\cdot$N, the size null", "X*.O_flow (outgoing factor)": "X$^*\\cdot$O$_{\\text{flow}}$, the outgoing factor",
+                        "hvol_sum (best complexity alone)": "Halstead volume summed", "nloc_sum": "lines summed",
+                        "nloc_sum x nom (size only)": "lines summed $\\times$ number of methods", "nloc_sum x (1+leaving calls)": "lines summed $\\times$ (1 + leaving calls)",
+                        "nloc_sum x (1+fan-out)": "lines summed $\\times$ (1 + fan-out)", "leaving calls alone": "leaving calls alone"}
+        METHOD_LABELS = {"X*_m = cognitive": "X$^*_m$ = \\texttt{cognitive}", "X*_m.D_flow (all calls)": "X$^*_m\\cdot$D$_{\\text{flow}}$, the primary arm",
+                         "X*_m.E_flow": "X$^*_m\\cdot$E$_{\\text{flow}}$", "X*_m.O_flow": "X$^*_m\\cdot$O$_{\\text{flow}}$",
+                         "tokens (best complexity alone)": "tokens", "nloc": "lines", "nloc x [any call]": "lines $\\times$ [makes any call]",
+                         "nloc x [internal call]": "lines $\\times$ [makes an internal call]", "nloc x (1+internal calls)": "lines $\\times$ (1 + internal calls)"}
+        def mtable(fname, labels, keyx, keyc):
+            rx, px = mrows(keyx); rc, pc = mrows(keyc)
+            body = ("\\begin{tabular}{lrlrrrrl}\n\\toprule\nForm & AUC, explore & AUC, confirm (vs X$^*$) & "
+                    "Flags at 3.5 & MCC at 3.5 & MCC, matched & Recall, matched & MCC vs X$^*$, matched (95\\% CI) \\\\\n\\midrule\n")
+            for k, lab in labels.items():
+                if k not in rc:
+                    continue
+                r, x = rc[k], rx.get(k)
+                vs = "--" if k == pc["base"] else est(r["auc_z_vs_base"])
+                mv = "--" if k == pc["base"] else est(r["matched"]["mcc_vs_base"])
+                body += (f"{lab} & {rate(x['auc_z'], 3) if x else 'n/a'} & {rate(r['auc_z'], 3)} ({vs}) & {r['own']['flagged']} & "
+                         f"{rate(r['own']['mcc'], 3)} & {rate(r['matched']['mcc'], 3)} & {rate(r['matched']['recall'])} & {mv} \\\\\n")
+            body += "\\bottomrule\n\\end{tabular}\n"
+            write(fname, body)
+            return rc, pc, rx, px
+        bc, bcp, bx, bxp = mtable("tab_matched_class.tex", CLASS_LABELS, (("explore",), "class", "human_blob"), (("confirm",), "class", "human_blob"))
+        lc, lcp, lx, lxp = mtable("tab_matched_method.tex", METHOD_LABELS, (("explore",), "method", "human_method_long_method"), (("confirm",), "method", "human_method_long_method"))
+        M("matchedClassFlags", count(bcp["matched_flags"])); M("matchedClassUnits", count(bcp["n_units"]))
+        M("matchedClassRate", pct(bcp["matched_flags"] / bcp["n_units"]))
+        xk, ok, nk, dk, sk = "X* = nloc_max", "X*.O_flow (outgoing factor)", "X*.N (size null)", "X*.D_flow (primary arm)", "nloc_sum x (1+leaving calls)"
+        M("matchedXAucConfirm", rate(bc[xk]["auc_z"], 3)); M("matchedXAucExplore", rate(bx[xk]["auc_z"], 3))
+        M("matchedOAucConfirm", rate(bc[ok]["auc_z"], 3)); M("matchedOAucExplore", rate(bx[ok]["auc_z"], 3))
+        M("matchedOAucVsXConfirm", est(bc[ok]["auc_z_vs_base"])); M("matchedOAucVsXExplore", est(bx[ok]["auc_z_vs_base"]))
+        M("matchedNAucVsXConfirm", est(bc[nk]["auc_z_vs_base"])); M("matchedDAucVsXConfirm", est(bc[dk]["auc_z_vs_base"]))
+        M("matchedSizeCallsAucVsXConfirm", est(bc[sk]["auc_z_vs_base"])); M("matchedSizeCallsAucVsXExplore", est(bx[sk]["auc_z_vs_base"]))
+        M("matchedXOwnFlags", str(bc[xk]["own"]["flagged"])); M("matchedOOwnFlags", str(bc[ok]["own"]["flagged"]))
+        M("matchedXOwnMcc", rate(bc[xk]["own"]["mcc"], 3)); M("matchedXMatchedMcc", rate(bc[xk]["matched"]["mcc"], 3))
+        M("matchedXMatchedRecall", rate(bc[xk]["matched"]["recall"])); M("matchedXMatchedPrecision", rate(bc[xk]["matched"]["precision"]))
+        M("matchedOMcc", rate(bc[ok]["own"]["mcc"], 3))
+        M("matchedOVsXConfirm", est(bc[ok]["matched"]["mcc_vs_base"])); M("matchedOVsXExplore", est(bx[ok]["matched"]["mcc_vs_base"]))
+        M("matchedNVsXConfirm", est(bc[nk]["matched"]["mcc_vs_base"])); M("matchedSizeCallsVsXConfirm", est(bc[sk]["matched"]["mcc_vs_base"]))
+        M("matchedSizeCallsVsXExplore", est(bx[sk]["matched"]["mcc_vs_base"]))
+        M("matchedDVsXConfirm", est(bc[dk]["matched"]["mcc_vs_base"]))
+        fo, fop = mrows((None, "class", "human_fontana_god_class"))
+        M("matchedFontanaOAucVsX", est(fo[ok]["auc_z_vs_base"])); M("matchedFontanaOVsX", est(fo[ok]["matched"]["mcc_vs_base"]))
+        M("matchedFontanaSizeCallsAucVsX", est(fo[sk]["auc_z_vs_base"]))
+        gk, ik, tk, ck, wk = "nloc x [any call]", "nloc x [internal call]", "tokens (best complexity alone)", "X*_m = cognitive", "nloc x (1+internal calls)"
+        M("matchedGateAucConfirm", rate(lc[gk]["auc_z"], 3)); M("matchedGateAucExplore", rate(lx[gk]["auc_z"], 3))
+        M("matchedGateAucVsXmConfirm", est(lc[gk]["auc_z_vs_base"])); M("matchedGateAucVsXmExplore", est(lx[gk]["auc_z_vs_base"]))
+        M("matchedTokensAucConfirm", rate(lc[tk]["auc_z"], 3)); M("matchedTokensAucVsXmConfirm", est(lc[tk]["auc_z_vs_base"]))
+        M("matchedTokensAucVsXmExplore", est(lx[tk]["auc_z_vs_base"]))
+        M("matchedCogAucConfirm", rate(lc[ck]["auc_z"], 3))
+        M("matchedIntGateAucVsXmConfirm", est(lc[ik]["auc_z_vs_base"])); M("matchedIntGateAucConfirm", rate(lc[ik]["auc_z"], 3))
+        M("matchedWeightAucVsXmConfirm", est(lc[wk]["auc_z_vs_base"]))
+        M("matchedGateVsXmConfirm", est(lc[gk]["matched"]["mcc_vs_base"])); M("matchedGateVsXmExplore", est(lx[gk]["matched"]["mcc_vs_base"]))
+        M("matchedMethodRate", pct(lcp["matched_flags"] / lcp["n_units"]))
+        M("matchedTokensVsXmConfirm", est(lc[tk]["matched"]["mcc_vs_base"]))
+        for o, tag in (("pmd_GodClass", "Pmd"), ("decor_blob", "Decor"), ("wmc47", "Wmc")):
+            ro, _ = mrows((None, "class", o))
+            if ro:
+                M(f"matchedTool{tag}OAuc", rate(ro[ok]["auc_z"], 3)); M(f"matchedTool{tag}XAuc", rate(ro[xk]["auc_z"], 3))
+                M(f"matchedTool{tag}NAuc", rate(ro[nk]["auc_z"], 3))
+    # --- what the reviewers judge (scripts/exploratory_reviewers.py) ----------------------------
+    rvk = (sorted(glob.glob(os.path.join(ROOT, "results", "exploratory", "reviewers.*.json"))) or [None])[-1]
+    RV = json.load(open(rvk)) if rvk and os.path.exists(rvk) else None
+    if RV:
+        M("revMadeUtc", RV["made_utc"][:8] + " " + RV["made_utc"][9:15] + " UTC")
+        shafile = rvk + ".sha256"
+        M("revShaShort", open(shafile).read().split()[0][:12] if os.path.exists(shafile) else "n/a")
+        M("revLongReviews", count(RV["reviews"]["long_method"])); M("revBlobReviews", count(RV["reviews"]["blob"]))
+        M("revLongUnmapped", count(RV["reviews"]["unmapped"].get("long method review on no measured unit", 0)))
+        M("revReviewers", str(len(RV["per_reviewer"])))
+        M("revNoCallLong", str(RV["no_call_at_all"]["long"])); M("revNoCallReviews", str(RV["no_call_at_all"]["reviews"]))
+        bl = RV["by_length_and_leaf"]
+        body = ("\\begin{tabular}{lrrrr}\n\\toprule\nLines of the method & Leaf reviews & called Long Method & "
+                "Non-leaf reviews & called Long Method \\\\\n\\midrule\n")
+        for b in ("1-10", "11-25", "26-50", "51-100", "101+"):
+            a, c = bl["leaf"].get(b), bl["non-leaf"].get(b)
+            body += (f"{b} & {a['reviews'] if a else 0} & {pct(a['rate']) if a else '--'} & {c['reviews'] if c else 0} & "
+                     f"{pct(c['rate']) if c else '--'} \\\\\n")
+        body += "\\bottomrule\n\\end{tabular}\n"
+        write("tab_reviewers.tex", body)
+        for b, tag in (("1-10", "Ten"), ("11-25", "TwentyFive"), ("26-50", "Fifty"), ("51-100", "Hundred"), ("101+", "Over")):
+            a, c = bl["leaf"].get(b), bl["non-leaf"].get(b)
+            M(f"revLeaf{tag}Rate", pct(a["rate"]) if a and a["rate"] is not None else "n/a")
+            M(f"revNonLeaf{tag}Rate", pct(c["rate"]) if c and c["rate"] is not None else "n/a")
+            M(f"revLeaf{tag}N", str(a["reviews"] if a else 0)); M(f"revNonLeaf{tag}N", str(c["reviews"] if c else 0))
+        M("revLongLeafMinusNonLeaf", est(RV["long_leaf_minus_nonleaf"]))
+        lower, shown = RV["per_reviewer_leaf_lower"]
+        M("revReviewersLeafLower", str(lower)); M("revReviewersShown", str(shown))
+        d3 = RV["disagreement"]
+        M("revDisagreeLongLeaf", pct(d3["long leaf"][2]) if d3["long leaf"][2] is not None else "n/a")
+        M("revDisagreeLongNonLeaf", pct(d3["long non-leaf"][2]) if d3["long non-leaf"][2] is not None else "n/a")
+        M("revDisagreeLongLeafN", str(d3["long leaf"][0])); M("revDisagreeLongNonLeafN", str(d3["long non-leaf"][0]))
+        cuts = RV["reviewer_cutoffs"]
+        M("revCutoffReviewers", str(len(cuts)))
+        M("revCutoffMin", str(int(min(c["best_cutoff"] for c in cuts.values()))))
+        M("revCutoffMax", str(int(max(c["best_cutoff"] for c in cuts.values()))))
+        M("revCutoffMedian", str(int(np.median([c["best_cutoff"] for c in cuts.values()]))))
+        M("revCutoffMccMin", rate(min(c["best_mcc"] for c in cuts.values()))); M("revCutoffMccMax", rate(max(c["best_mcc"] for c in cuts.values())))
+        M("revPosMedianMin", str(int(min(c["median_len_positive"] for c in cuts.values()))))
+        M("revPosMedianMax", str(int(max(c["median_len_positive"] for c in cuts.values()))))
+        M("revNegMedianMax", str(int(max(c["median_len_negative"] for c in cuts.values()))))
+        bb = RV["blob"]
+        for b, tag in (("1-100", "Hundred"), ("101-250", "TwoFifty"), ("251-500", "FiveHundred"), ("501-1000", "Thousand"), ("1001+", "Over")):
+            M(f"revBlob{tag}Rate", pct(bb[b]["rate"])); M(f"revBlob{tag}N", count(bb[b]["reviews"]))
+            M(f"revBlob{tag}Disagree", pct(bb[b]["not_unanimous"] / bb[b]["samples_2plus"]) if bb[b]["samples_2plus"] else "n/a")
+        fc = RV.get("flagged_by_cognitive")
+        if fc:
+            M("revFlaggedLeafN", str(fc["leaf"]["reviews"])); M("revFlaggedRestN", str(fc["rest"]["reviews"]))
+            M("revFlaggedLeafMedianLen", str(int(fc["leaf"]["median_lines"])) if fc["leaf"]["median_lines"] else "n/a")
+            M("revFlaggedRestMedianLen", str(int(fc["rest"]["median_lines"])) if fc["rest"]["median_lines"] else "n/a")
+            M("revFlaggedLeafRate", pct(fc["leaf"]["rate"]) if fc["leaf"]["rate"] is not None else "n/a")
+            M("revFlaggedRestRate", pct(fc["rest"]["rate"]) if fc["rest"]["rate"] is not None else "n/a")
+        lc_ = bb.get("large_by_calls", {})
+        for t, tag in (("low", "Low"), ("mid", "Mid"), ("high", "High")):
+            if t in lc_:
+                M(f"revBlobLargeCalls{tag}Rate", pct(lc_[t]["rate"]))
+    if MR:
+        for pop_key, tag in (((("confirm",), "method", "human_method_long_method"), "Confirm"), ((("explore",), "method", "human_method_long_method"), "Explore")):
+            rr, pp = mrows(pop_key)
+            if pp and "nloc x [any call]" in rr and rr["nloc x [any call]"].get("auc_z_vs_alt") is not None:
+                g = rr["nloc x [any call]"]
+                M(f"matchedGateAucVsTokens{tag}", est(g["auc_z_vs_alt"])); M(f"matchedGatePctVsTokens{tag}", est(g["auc_pct_vs_alt"]))
+                M(f"matchedGateMatchedVsTokens{tag}", est(g["matched_mcc_vs_alt"]))
+                M(f"matchedLinesPctVsTokens{tag}", est(rr["nloc"]["auc_pct_vs_alt"]))
+                M(f"matchedGatePct{tag}", rate(g["auc_pct"], 3)); M(f"matchedLinesPct{tag}", rate(rr["nloc"]["auc_pct"], 3))
+                M(f"matchedTokensPct{tag}", rate(rr["tokens (best complexity alone)"]["auc_pct"], 3))
+                M(f"matchedCogPct{tag}", rate(rr["X*_m = cognitive"]["auc_pct"], 3))
+                M(f"matchedLinesOwnFlags{tag}", str(rr["nloc"]["own"]["flagged"])); M(f"matchedTokensOwnFlags{tag}", str(rr["tokens (best complexity alone)"]["own"]["flagged"]))
+                M(f"matchedGateOwnFlags{tag}", str(rr["nloc x [any call]"]["own"]["flagged"])); M(f"matchedCogOwnFlags{tag}", str(rr["X*_m = cognitive"]["own"]["flagged"]))
+                M(f"matchedGateOwnMcc{tag}", rate(rr["nloc x [any call]"]["own"]["mcc"], 3)); M(f"matchedLinesOwnMcc{tag}", rate(rr["nloc"]["own"]["mcc"], 3))
+        rr, pp = mrows((("confirm",), "class", "human_blob"))
+        if pp and rr["X*.O_flow (outgoing factor)"].get("auc_z_vs_alt") is not None:
+            M("matchedOAucVsHvolConfirm", est(rr["X*.O_flow (outgoing factor)"]["auc_z_vs_alt"]))
+            M("matchedSizeCallsAucVsHvolConfirm", est(rr["nloc_sum x (1+leaving calls)"]["auc_z_vs_alt"]))
+    lk = getattr(args, "log_matrix", None) or (sorted(glob.glob(os.path.join(ROOT, "results", "exploratory", "log-matrix.*.json"))) or [None])[-1]
+    LM = json.load(open(lk)) if lk and os.path.exists(lk) else None
+    if LM:
+        M("logMadeUtc", LM["made_utc"][:8] + " " + LM["made_utc"][9:15] + " UTC")
+        shafile = lk + ".sha256"
+        M("logShaShort", open(shafile).read().split()[0][:12] if os.path.exists(shafile) else "n/a")
+        lp = {(tuple(p["set_halves"]) if p["set_halves"] else None, p["level"], p["oracle"]): p for p in LM["populations"]}
+        pb = lp.get((("confirm",), "class", "human_blob")); pm_ = lp.get((("confirm",), "method", "human_method_long_method"))
+        if pb:
+            rb = {r["form"]: r for r in pb["rows"]}
+            M("logClassForms", str(len(pb["rows"]))); M("logClassBetter", str(pb["log_better"])); M("logClassWorse", str(pb["log_worse"]))
+            M("logXFlagsRaw", str(rb["nloc_max"]["flagged_raw"])); M("logXFlagsLog", str(rb["nloc_max"]["flagged_log"]))
+            M("logXMccLog", rate(rb["nloc_max"]["mcc_log"], 3)); M("logOMccLog", rate(rb["nloc_max*O_flow[A]"]["mcc_log"], 3))
+            M("logOMinusRaw", est(rb["nloc_max*O_flow[A]"]["log_minus_raw"]))
+            top = max(pb["rows"], key=lambda r: r["mcc_log"]); M("logClassTopMcc", rate(top["mcc_log"], 3)); M("logClassTopRaw", rate(top["mcc_raw"], 3))
+        if pm_:
+            rm_ = {r["form"]: r for r in pm_["rows"]}
+            M("logMethodForms", str(len(pm_["rows"]))); M("logMethodBetter", str(pm_["log_better"])); M("logMethodWorse", str(pm_["log_worse"]))
+            M("logTokensFlagsRaw", str(rm_["tokens"]["flagged_raw"])); M("logTokensFlagsLog", str(rm_["tokens"]["flagged_log"]))
 
     # the ancillary account of every deviation, from the same numbers
     def plain(v: str) -> str:

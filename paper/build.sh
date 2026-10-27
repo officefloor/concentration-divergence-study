@@ -61,7 +61,7 @@ pack() {
   for f in analysis.json analysis.json.sha256; do
     cp "$ROOT/results/$f" "$d/" 2>/dev/null || echo "   ! results/$f missing" >&2; done
   cp "$ROOT"/results/analysis.v*.json "$ROOT"/results/analysis.v*.json.sha256 "$d/" 2>/dev/null || true
-  cp "$ROOT"/results/exploratory/ranking.*.json "$ROOT"/results/exploratory/ranking.*.json.sha256 "$d/" 2>/dev/null || echo "   ! results/exploratory/ranking.*.json missing: run scripts/exploratory_ranking.py" >&2
+  cp "$ROOT"/results/exploratory/*.json "$ROOT"/results/exploratory/*.json.sha256 "$d/" 2>/dev/null || echo "   ! results/exploratory/*.json missing: run scripts/exploratory_ranking.py, exploratory_matched.py, exploratory_log_matrix.py" >&2
   cp "$ROOT"/results/analysis.exploratory.*.json "$ROOT"/results/analysis.exploratory.*.json.sha256 "$d/" 2>/dev/null || true
   cp "$ROOT/analysis-hashes.txt" "$d/"
   d="$stage/anc/decisions"; mkdir -p "$d"

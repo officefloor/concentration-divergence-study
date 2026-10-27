@@ -152,6 +152,10 @@ trove's benchmark classes, all negatives, outside its source jar.
 After the confirmatory analysis on the registered populations was read, the candidate forms
 the paper's Section 5.9 reports (size times outgoing calls at class level; the "makes a call"
 gate at method level) were computed from the raw records by `scripts/exploratory_ranking.py`
-({{expMadeUtc}}, sha256 `{{expShaShort}}…`) and read against every oracle, both MLCQ halves
-included. Nothing registered changes; the forms are hypotheses for a next registration, chosen
+({{expMadeUtc}}, sha256 `{{expShaShort}}…`), read at a matched flag rate and as a threshold-free
+AUC by `scripts/exploratory_matched.py` ({{matchedMadeUtc}}, sha256 `{{matchedShaShort}}…`), and the
+registered matrix recomputed on a logarithmic scale by `scripts/exploratory_log_matrix.py`
+({{logMadeUtc}}, sha256 `{{logShaShort}}…`), and MLCQ's individual reviews joined to the measured
+units by `scripts/exploratory_reviewers.py` ({{revMadeUtc}}, sha256 `{{revShaShort}}…`); each read
+against every oracle, both MLCQ halves included. Nothing registered changes; the forms are hypotheses for a next registration, chosen
 by looking, and the paper labels every number from them as post hoc.

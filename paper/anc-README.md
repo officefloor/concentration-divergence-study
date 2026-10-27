@@ -37,6 +37,9 @@ Everything is public and Apache-2.0 licensed unless stated.
 | `analysis.v1.json`, `.sha256` | The first confirmatory analysis (2026-10-26 08:04 UTC, commit `a809d0a`, sha256 `d64d4c8d…`), set aside by Amendment 9 because Fontana's archives had resolved for 19 of 73 systems; none of its results had been read. |
 | `analysis.v2.json`, `.sha256` | The second (2026-10-26 09:49 UTC, commit `4d73bc1`, sha256 `9519e246…`), set aside by Amendment 10: the human populations held only the repositories with a positive. Its results had been read and reported to the author in a draft of the paper before the fault was found. `DEVIATIONS.md` tabulates every headline reading of this file against the reported one. |
 | `analysis.exploratory.<utc>.json` | Any later re-analysis (none existed when the paper was built). |
+| `matched.<utc>.json`, `.sha256` | **Ranking or flag rate** (paper, Section 5.9): for the registered arms and the exploratory forms, the threshold-free pooled AUC of the per-repository modified z and of the per-repository percentile over the reviewed units, with the paired bootstrap against X\*, and every form read at a matched flag rate (the constant that gives it as many flags over every unit as X\*·O_flow has at 3.5; at method level as tokens has), by `scripts/exploratory_matched.py`. Post hoc. |
+| `log-matrix.<utc>.json`, `.sha256` | The registered matrix with ln(1 + X) in place of every complexity signal X, scored by the registered rule against every oracle and paired with the raw form from the score files, by `scripts/exploratory_log_matrix.py`. Post hoc; reported in one sentence of Section 5.9 because a logarithm compresses the tail and the rule then flags almost nothing. |
+| `reviewers.<utc>.json`, `.sha256` | **What the reviewers judge** (paper, Section 5.9): MLCQ's individual reviews (reviewer, severity) joined to the measured units, by `scripts/exploratory_reviewers.py`: the Long Method rate by length bin for leaves (no internal call) and the rest, per reviewer, the disagreement among multiply reviewed samples, each reviewer's own best length cutoff, and the Blob rate and disagreement by class size. Post hoc. |
 | `ranking.<utc>.json`, `.sha256` | **The post hoc exploration** (paper, Section 5.9): every candidate form built from size and outgoing calls, scored from the raw records by `scripts/exploratory_ranking.py` (in the harness repository) by the registered rule against every oracle, with paired bootstrap differences against the best complexity-alone signal and the size-only counterparts. Made after every oracle had been read; labelled `kind: exploratory`; its `harness_commit` is inside it and its digest in `analysis-hashes.txt`. |
 | `analysis-hashes.txt` | The committed digests of the analyses, the decisions, the labels, the samples and each set's run and validation records. |
 
@@ -118,6 +121,12 @@ per-call data (the plain internal-call count, fan-out as distinct callee files, 
 "makes at least one call"), and writes `results/exploratory/ranking.<utc>.json`. The paper's
 generator reads the latest such file (or `--ranking FILE`) for Section 5.9's two tables and
 inline numbers.
+
+    .venv/bin/python scripts/exploratory_matched.py       # AUC and matched flag rate, ~7 minutes
+    .venv/bin/python scripts/exploratory_log_matrix.py    # the log-scale matrix, ~3 minutes with 6 workers
+    .venv/bin/python scripts/exploratory_reviewers.py     # the reviews themselves, ~3 minutes
+
+The paper's generator reads the latest of each (`--matched FILE`, `--log-matrix FILE`).
 
 ### The population fault (paper, Section 6; `DEVIATIONS.md`, 1)
 

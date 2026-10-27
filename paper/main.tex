@@ -63,31 +63,34 @@ the data a unit hands on}
 \begin{abstract}
 \noindent
 A complexity outlier rule finds where complexity concentrates but, a
-companion study found, cannot tell a god unit from a complex algorithm, a
-leaf that legitimately holds the complexity of what it computes. This paper
-pre-registers a test of one way to tell them apart: weight a unit's
-complexity by its \emph{coupling divergence}, the data it hands on minus the
-data it receives, so that a leaf that takes in more than it sends is set
-aside. Coupling is measured by resolving every call in \mlcqMeasured{} MLCQ
-repositories, \seedThreeMeasured{} fresh Java repositories and
-\fontanaSystems{} Qualitas Corpus systems, and the weighted signal is scored
-by the same scale-free outlier rule as complexity alone against MLCQ's
-reviewers, Fontana's God Class and five tool definitions. The primary, the
-pooled MCC of the weighted form minus complexity alone against human Blob on
-the confirm half, is \primMicro{}: no difference resolved, and underpowered.
-The exemption itself holds in two human oracles of three: among the units
-complexity flags, a leaf is called Long Method less often
-(\leafMethodDiff{}) and God Class less often (\leafFontanaDiff{}), while for
-Blob the difference is unresolved. The factor built on it still does not
-help, because what it adds costs more than the exemption gains: the whole
-factor loses to the exemption alone, to a plain weighting by the number of
-methods (\primDvsNMicro{}) and to complexity alone on the threshold-free
-ranking (AUC \primAucX{} against \primAucD{}). The outgoing side alone
-carries the signal: multiplying complexity by the data a class sends out
-raises the MCC against human Blob in the peak and density families by
-\pOneOPeak{} and \pOneODensity{}, and subtracting what the class receives
-costs agreement in every class-level family, so the construct's verdict, by
-its pre-registered rule, is \emph{\consVerdict}.
+companion study found, cannot tell a god unit from a complex algorithm.
+This paper pre-registers a test of one way to tell them apart: weight a
+unit's complexity by its \emph{coupling divergence}, the data it hands on
+minus the data it receives, so that a leaf is set aside. Coupling is
+measured by resolving every call in \mlcqMeasured{} MLCQ repositories,
+\seedThreeMeasured{} fresh Java repositories and \fontanaSystems{} Qualitas
+Corpus systems, and the weighted signal is scored by the same scale-free
+outlier rule as complexity alone against MLCQ's reviewers, Fontana's God
+Class and five tool definitions. The primary, the pooled MCC of the
+weighted form minus complexity alone against human Blob, is \primMicro{}:
+no difference resolved, and underpowered. The exemption holds in two human
+oracles of three, but the factor built on it loses to the exemption alone,
+to a weighting by the number of methods, and to complexity alone on the
+threshold-free ranking (AUC \primAucX{} against \primAucD{}). By the
+pre-registered rule the construct's verdict is \emph{\consVerdict}: the
+outgoing factor raises the MCC against Blob in the peak and density families
+by \pOneOPeak{} and \pOneODensity{}. A post hoc threshold-free read
+qualifies that: the outgoing factor flags two and a half times as many
+classes and ranks Blobs no better than complexity alone (AUC
+\matchedOAucConfirm{} against \matchedXAucConfirm{}), so its gain is the
+flag rate. At method level length ranks Long Methods best of every form,
+and MLCQ's individual reviews show why: the share calling a method a Long
+Method rises from \revNonLeafTwentyFiveRate{} at 11 to 25 lines to
+\revNonLeafFiftyRate{} at 26 to 50, each reviewer's best cutoff lies between
+\revCutoffMin{} and \revCutoffMax{} lines, and at equal length a leaf is
+called a Long Method no less often than a non-leaf. The reviewers' Long
+Method is an absolute length, which a per-repository rule is the wrong
+model for.
 \end{abstract}
 
 \section{Introduction}
@@ -125,8 +128,11 @@ the whole factor goes against it. The exemption at the heart of the claim,
 that a catchment is less often a god unit, is seen in the labels at method
 level and in Fontana's God Class, and is unresolved for MLCQ's Blob; but the
 factor built on it, which also amplifies a junction by its divergence, costs
-more than the exemption gains. The component that carries a signal is the
-one the claim subtracted: the data a class sends out. This paper reports the
+more than the exemption gains. At the registered operating point the component that carries a signal is
+the one the claim subtracted, the data a class sends out; a post hoc threshold-free read shows that gain to be a flag rate rather
+than a better ranking. At method level the reviews themselves show what
+people call a Long Method: a method past about twenty-five lines, leaf or
+not, which no form built from calls ranks better than length does. This paper reports the
 numbers in the order the plan fixed, the primary first, then the
 diagnostic that tests the exemption on its own, then the consistency
 analysis across oracles and definitions that reads the construct as a
@@ -555,9 +561,11 @@ catchments are God Classes against \leafFontanaRestRate{} of the rest,
 \leafFontanaSupported{} of \leafFontanaVariants{} variants in all.
 A complex unit that receives more than it sends is called a god unit less
 often by two of the three human oracles, and not detectably less often by
-the third. The exemption is a distinction the labels carry; the question the
-rest of the results answer is why the factor that rests on it does not
-improve detection.
+the third. The exemption is a distinction the labels carry among the units complexity
+flags; Section~\ref{sec:explore-forms} reads it against the individual
+reviews, where it holds for the branchy leaves complexity flags and not for
+leaves at large, and the rest of the results say why the factor that rests
+on it does not improve detection.
 
 \subsection{The construct: the consistency analysis}
 \label{sec:cons}
@@ -625,9 +633,11 @@ flow:
 
 The verdict on the construct, by the pre-registered rule, is
 \textbf{\consVerdict}: P1 holds for \dO{} and not for \dD{}, and P3 reads
-outgoing-only. With constructors counted in the inputs the verdict is
-\consCtorVerdict{} and \consCtorAgrees{}; on the JavaParser-only set it is
-\consJpVerdict{} and \consJpAgrees{}. Under the data definition P1
+outgoing-only. With constructors counted in the inputs the verdict is \consCtorVerdict{}
+and \consCtorAgrees{}; on the JavaParser-only set it is \consJpVerdict{}
+and \consJpAgrees{}. Section~\ref{sec:explore-forms} reads the \dO{} gain
+threshold-free and at a matched flag rate, post hoc, and on MLCQ it does not
+survive either. Under the data definition P1
 \pOneDataHolds{} for \dD{} and \pOneDataOHolds{} for \dO{} (peak:
 \pOneDataOPeak{}) and P3 reads \pThreeDataReads{}; under message, P1
 \pOneMessageHolds{} for \dD{} and \pOneMessageOHolds{} for \dO{} (peak:
@@ -677,7 +687,9 @@ have a pooled lower bound above 0, the outgoing factor under flow
 reaches an MCC of \secOFlowMcc{} against \primXMcc{}, recall
 \secOFlowRecall{} against \primXRecall{} at precision \secOFlowPrecision{},
 and its macro difference is \secOFlowMacro{}; its family average in
-Section~\ref{sec:cons} is resolved as well. The divergence under data and
+Section~\ref{sec:cons} is resolved as well. It flags \matchedOOwnFlags{}
+reviewed classes where \Xs{} flags \matchedXOwnFlags{}; what that gain is
+worth at a matched rate is read in Section~\ref{sec:explore-forms}. The divergence under data and
 message, the public input variant, and both variants with constructors are
 each within a few hundredths of the primary. The intersection of the two
 outlier sets (a class flagged on \Xs{} and on $d$) raises precision and
@@ -975,20 +987,168 @@ does not depend on the symbol solver; gating on a call that leaves the class
 loses it (\expGateLeaveConfirmMcc{}). Weighting lines by the number of calls,
 the registered form, destroys it: \expWeightConfirmMcc{},
 \expWeightConfirmVsTokens{}. Lines alone, ungated, is \expLinesConfirmMcc{}.
-A long method that calls nothing at all, a lookup table, a large initialiser,
-a hand-written state machine, is not what the reviewers call a Long Method,
-and once those are set aside length is the signal; cyclomatic density is
-near zero gated or not (\expDensityGateConfirmMcc{},
-\expMethodDensityConfirmMcc{}). Against the tool definitions, which have no
+Cyclomatic density is near zero gated or not (\expDensityGateConfirmMcc{},
+\expMethodDensityConfirmMcc{}). What the gate does is not what it looks
+like. Methods that make no call at all are almost never long
+(\revNoCallLong{} long ones among \revNoCallReviews{} reviews of such
+methods), so the gate removes nothing the reviewers would have called a
+Long Method; what it removes is the short no-call methods, the getters,
+setters and trivial constructors, whose zeros move the repository's median
+and MAD so that the constant lands where length separates best. Raw lines
+at 3.5 flag \matchedLinesOwnFlagsConfirm{} reviewed methods, tokens
+\matchedTokensOwnFlagsConfirm{}, the gate \matchedGateOwnFlagsConfirm{};
+the gate's gain is a recalibration of the constant, and the next paragraph
+shows it ranks no better than length. Against the tool definitions, which have no
 such exemption, the gate costs a little (PMD NPath: \expToolNpathCcMcc{} to
 \expToolNpathCcGateMcc{} on cyclomatic; Brain Method:
 \expToolBrainCogMcc{} to \expToolBrainCogGateMcc{} on cognitive).
 
+\begin{table}[t]
+\centering
+\caption{Exploratory, post hoc: ranking or flag rate, class level against
+MLCQ human Blob. AUC is the threshold-free pooled AUC of the form's
+per-repository modified z over the reviewed units, with the paired bootstrap
+difference against \Xs{} on the confirm half. ``Matched'' reads every form
+at the constant that gives it as many flags over every class of the confirm
+repositories as \Xs$\cdot$\Oflow{} has at 3.5 (\matchedClassFlags{} of
+\matchedClassUnits{}, \matchedClassRate{}).}
+\label{tab:matched-class}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\fitwidth{\input{generated/tab_matched_class}}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{The same at method level against MLCQ human Long Method, matched to
+the flag rate of tokens at 3.5 (\matchedMethodRate{} of methods), against
+\Xm{}.}
+\label{tab:matched-method}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\fitwidth{\input{generated/tab_matched_method}}
+\end{table}
+
+\paragraph{Ranking or flag rate.} A coupling factor can raise the MCC at the
+rule's constant in two ways: by ranking the god units higher, or by flagging
+more units along much the same ranking. \Xs$\cdot$\Oflow{} flags
+\matchedOOwnFlags{} of the reviewed confirm classes where \Xs{} flags
+\matchedXOwnFlags{}. Two reads separate the two, post hoc
+(Tables~\ref{tab:matched-class} and \ref{tab:matched-method}): the
+threshold-free pooled AUC of each form's per-repository modified z over the
+reviewed units, with the paired bootstrap against \Xs{}; and each form at a
+matched flag rate, the constant that gives it as many flags over every unit
+of the population's repositories as \Xs$\cdot$\Oflow{} has at 3.5. At class
+level the outgoing factor ranks Blobs no better than complexity alone: AUC
+\matchedOAucConfirm{} against \matchedXAucConfirm{} on confirm
+(\matchedOAucVsXConfirm{}) and \matchedOAucExplore{} against
+\matchedXAucExplore{} on explore (\matchedOAucVsXExplore{}); and at the
+matched rate \Xs{} alone reaches \matchedXMatchedMcc{} (recall
+\matchedXMatchedRecall{}) against the outgoing factor's \matchedOMcc{},
+\matchedOVsXConfirm{} on confirm and \matchedOVsXExplore{} on explore. The
+size null's AUC equals \Xs{}'s (\matchedNAucVsXConfirm{}), the divergence
+factor's is resolved worse (\matchedDAucVsXConfirm{}), and the exploratory
+size $\times$ calls form ranks no better either
+(\matchedSizeCallsAucVsXConfirm{} on confirm,
+\matchedSizeCallsAucVsXExplore{} on explore). On Fontana the outgoing factor
+does rank better (\matchedFontanaOAucVsX{}; at the matched rate
+\matchedFontanaOVsX{}). So on MLCQ the construct's one surviving reading at
+the operating point, that outgoing data refines complexity, is a flag-rate
+effect, and a lower constant on complexity alone does the same. At method level the ranking belongs to length. The any-call gate ranks
+Long Methods better than the registered signal, cognitive complexity (AUC
+\matchedGateAucConfirm{} against \matchedCogAucConfirm{},
+\matchedGateAucVsXmConfirm{} on confirm and \matchedGateAucVsXmExplore{}
+on explore), but no better than length itself: against tokens its
+percentile-rank AUC differs by \matchedGatePctVsTokensConfirm{} on confirm
+and \matchedGatePctVsTokensExplore{} on explore, and at tokens' flag rate
+its MCC is \matchedGateMatchedVsTokensConfirm{} on confirm and
+\matchedGateMatchedVsTokensExplore{} on explore. Lines and tokens rank
+alike (percentile AUC \matchedLinesPctConfirm{} and
+\matchedTokensPctConfirm{}, against \matchedCogPctConfirm{} for cognitive
+complexity); the internal-call gate ranks worse
+(\matchedIntGateAucVsXmConfirm{}), because the leaves it discards include
+Long Methods; and the weight does not change the ranking at all
+(\matchedWeightAucVsXmConfirm{}), its loss being pure flag rate. So the
+registered signal was the wrong length measure, the registered factor was a
+flag-rate loss on it, and the gate is a flag-rate gain on the right one.
+
+\begin{table}[t]
+\centering
+\caption{Exploratory, post hoc: MLCQ's individual Long Method reviews on
+measured units (\revLongReviews{} reviews by \revReviewers{} reviewers,
+both halves), by the method's length and whether it is a leaf (no internal
+call): the share of reviews that call the method a Long Method at any
+severity.}
+\label{tab:reviewers}
+\small
+\setlength{\tabcolsep}{4pt}
+\fitwidth{\input{generated/tab_reviewers}}
+\end{table}
+
+\paragraph{What the reviewers judge.} MLCQ keeps every review, so the
+reading that a reviewer asks first whether a method is a self-contained
+algorithm and then whether it is long can be put to the reviews themselves
+(Table~\ref{tab:reviewers}; \revLongUnmapped{} reviews on units the harness
+did not measure are left out). The share of reviews calling a method a
+Long Method is \revNonLeafTenRate{} up to 10 lines,
+\revNonLeafTwentyFiveRate{} at 11 to 25, \revNonLeafFiftyRate{} at 26 to 50
+and \revNonLeafHundredRate{} at 51 to 100: a step at about twenty-five
+lines. Each of the \revCutoffReviewers{} reviewers with ten or more
+positives has a best length cutoff between \revCutoffMin{} and
+\revCutoffMax{} lines (median \revCutoffMedian{}), separating their own
+positive from their negative reviews at an MCC of \revCutoffMccMin{} to
+\revCutoffMccMax{}; the median length of a reviewer's positives is
+\revPosMedianMin{} to \revPosMedianMax{} lines and of their negatives at
+most \revNegMedianMax{}. That is an absolute constant, carried from
+reviewer to reviewer within a few lines, which is why a cutoff tuned on
+MLCQ beat the per-repository rule in the companion study and why no
+per-repository form here can reach it. At equal length a leaf is called a
+Long Method no less often than a non-leaf (\revLeafFiftyRate{} against
+\revNonLeafFiftyRate{} at 26 to 50 lines, \revLeafHundredRate{} against
+\revNonLeafHundredRate{} at 51 to 100; over all long methods
+\revLongLeafMinusNonLeaf{}), reviewers disagree on long leaves no more than
+on long non-leaves (\revDisagreeLongLeaf{} against
+\revDisagreeLongNonLeaf{} of multiply reviewed samples not unanimous), and
+the severities match. The exemption the registered diagnostic supported is
+narrower than the construct: among the reviewed methods cognitive
+complexity flags, leaves are called Long Method less often than the rest
+(\revFlaggedLeafRate{} against \revFlaggedRestRate{}) at the same median
+length (\revFlaggedLeafMedianLen{} against \revFlaggedRestMedianLen{}
+lines), so it is the branchy leaf, the dense algorithm complexity singles
+out, that reviewers decline to call a Long Method, and not a leaf as such.
+For Blob the reviews say less: the Blob rate is \revBlobHundredRate{} for
+classes up to 100 lines, \revBlobTwoFiftyRate{} at 101 to 250,
+\revBlobFiveHundredRate{} at 251 to 500 and then no higher
+(\revBlobThousandRate{} at 501 to 1000, \revBlobOverRate{} above);
+between \revBlobHundredDisagree{} and \revBlobTwoFiftyDisagree{} of
+multiply reviewed samples are not unanimous; and among classes over 500
+lines the Blob rate by tertile of leaving calls is
+\revBlobLargeCallsLowRate{}, \revBlobLargeCallsMidRate{} and
+\revBlobLargeCallsHighRate{}. The Blob label has a size step and much
+disagreement, and little else these measures see, which is the ceiling
+every class form hit.
+
+\paragraph{The logarithmic scale.} Every registered form was also recomputed
+with $\ln(1 + X)$ in place of the complexity signal X (\logClassForms{}
+class forms, \logMethodForms{} method forms), to ask whether the complexity
+term dominates the product. Under the fixed constant a logarithm compresses
+the tail and the rule then flags almost nothing on the signal alone
+(\logXFlagsLog{} classes against \logXFlagsRaw{} for \Xs{}, MCC
+\logXMccLog{}), so a log form recovers only where a factor re-expands the
+tail; across the matrix the log form is resolved worse than the raw one in
+\logClassWorse{} of \logClassForms{} class forms and better in
+\logClassBetter{}, and the best log form against Blob reaches
+\logClassTopMcc{}, no better than the best raw one. A monotone transform
+moves the constant, not the ranking, which is why the threshold-free read
+above is the one that decides.
+
 \paragraph{What this is and is not.} These are the best of
 \expClassForms{} class forms and \expMethodForms{} method forms, chosen by
-looking, on labels that had all been read. The class-level gain over complexity alone is about +0.03 on each half and
-unresolved; the method-level gain is resolved on the confirm half for both
-gates and on the explore half for the internal-call gate. Both are hypotheses for the
+looking, on labels that had all been read. The class-level gain over complexity alone is about +0.03 on each half,
+unresolved, and absent from the threshold-free ranking; the method-level
+gain is a recalibration of the constant on length, which ranks no better
+than length itself. What the reviews show, that Long Method is an absolute
+length, is the one reading here that does not depend on a chosen form. Both are hypotheses for the
 next registration, stated in Section~\ref{sec:disc}, and neither is a result
 of this study.
 
@@ -1067,16 +1227,22 @@ secondaries resolved on the same population are suspect.
 where it fails.} Three things were expected of the divergence factor: that
 it would raise precision by setting complex leaves aside, that the leaves
 set aside would be called god units less often, and that what a unit
-receives would matter as well as what it sends. The second is seen, in two
-human oracles of three: a flagged catchment is a Long Method, or a Fontana
-God Class, less often than a flagged junction, and for MLCQ's Blob the
-difference is unresolved with every point estimate on the same side. The
+receives would matter as well as what it sends. The second is seen, in two human oracles of three: a flagged catchment is
+a Long Method, or a Fontana God Class, less often than a flagged junction,
+and for MLCQ's Blob the difference is unresolved with every point estimate
+on the same side; the individual reviews narrow it to the branchy leaves
+complexity flags, and show no exemption for leaves at equal length. The
 first and the third are not seen. The precision falls and the recall rises,
 and in every family of every class-level oracle, subtracting the inputs from
-the outputs costs agreement. What is seen is
-that the outputs alone carry a signal, resolved against both human class
-oracles and every class-level tool oracle, and the size null says how far
-that signal is size: a plain weighting by the number of methods beats the
+the outputs costs agreement. What is seen at the registered operating point is that the outputs alone
+carry a signal, resolved against both human class oracles and every
+class-level tool oracle; the threshold-free read (Section~\ref{sec:explore-forms})
+then shows that on MLCQ the outgoing factor ranks Blobs no better than
+complexity alone and gains by flagging two and a half times as many
+classes, while on Fontana it does rank better. The verdict \emph{outgoing
+data only} is therefore a statement about the operating point, and the
+construct's residue on the human labels is smaller than the verdict reads.
+The size null says how far the operating-point signal is size: a plain weighting by the number of methods beats the
 divergence factor by a resolved margin and is itself not resolved against
 complexity alone. The outgoing factor's effect on \Xs{} is of the same
 order as the size null's at the operating point and larger in the family
@@ -1084,7 +1250,7 @@ averages, so part of it is size and part may not be; separating the two is
 the next question, and this study did not register a test of it. In Tempero
 and Ralph's terms \cite{tempero2026metrics}, divergence as an indicator of
 the sinew construct fails convergent validity against three human
-definitions of a god unit, and the component that converges is out-coupling,
+definitions of a god unit, and the component that converges, at the operating point, is out-coupling,
 which Arif, Kuutila and Ralph found loading as a construct of its own
 \cite{arif2026}, and which the companion study's two readers agreed was what
 distinguished the extra flags they could read \cite{paperone}.
@@ -1104,46 +1270,47 @@ subtracting its surface pushes the hubs people call Blobs towards the
 catchment side. That is the opposite of the construct's reading of a
 catchment as a leaf doing honest work.
 
-\paragraph{Where the exemption helps, and why it is not enough.} The leaf
-diagnostic says the exemption is a distinction the labels carry: among the
-units complexity flags, a catchment is a god unit less often by two human
-oracles. The exemption-only arm is nonetheless within hundredths of
-complexity alone at both levels, because the catchments it sets aside
-include god units (\leafCatchPositive{} of the \leafCatchFlagged{} among the
-Blob flags, \leafMethodCatchPositive{} of the \leafMethodCatchFlagged{}
-among the Long Method flags) and the zeros it leaves move the rule's scale;
-the whole factor then amplifies the junctions that remain by an unbounded
-$d + 1$, and loses what the exemption gained. The resolved gains of the whole factor, against the internal Brain Method
-and in the density families, are cases where complexity alone flags a large
-tail of a zero-heavy signal and the exemption prunes it, a correction for the
-rule's fallback on tied populations, which the companion study reported at
-method level. The post hoc exploration (Section~\ref{sec:explore-forms})
-finds the exemption's own form: a gate on whether the method makes any call
-at all, which lifts length from \expTokensConfirmMcc{} (tokens) to
-\expGateAnyConfirmMcc{} against Long Method on the confirm half, resolved
-there and, for the internal-call gate, on the explore half too. The
-registered factor carried that gate and an amplification by the call count
-together, and the amplification cost more than the gate gained.
+\paragraph{Where the exemption seemed to help, and what it was.} The leaf
+diagnostic says that among the units complexity flags, a catchment is a god
+unit less often by two human oracles, and the reviews confirm it for the
+dense, branchy leaves cognitive complexity singles out. But the
+exemption-only arm is within hundredths of complexity alone at both levels,
+because the leaves it sets aside include god units and the zeros it leaves
+move the rule's scale, and the whole factor then amplifies the junctions
+that remain by an unbounded $d + 1$ and loses what the exemption gained.
+The post hoc gate on any call, which looked like the exemption's own form,
+turned out to be something else: methods that call nothing are almost never
+long, so the gate exempts no Long Method; it zeros the short trivial
+methods and so moves the constant to where length separates best. It ranks
+Long Methods no better than tokens or lines do. The finding underneath is
+that length ranks Long Methods best of everything measured, better than the
+registered cognitive signal, and that the rule's constant on raw length is
+badly placed: a tuned constant on length reached 0.785 in the companion
+study, and the reviews explain why, since each reviewer carries a length
+cutoff near twenty-five lines whatever the repository.
 
 \paragraph{Two hypotheses for the next registration.} The exploration leaves
 two forms, each old in its ingredients. A god class is a class whose total
 lines times its outgoing calls is an outlier for its codebase: size times
 fan-out, which is Chidamber and Kemerer's response for a class as a product
 rather than a sum, and Lanza and Marinescu's God Class without the cohesion
-clause. It is ahead of complexity alone by about +0.03 on each half,
-unresolved, and ahead of a size-only weighting on one half; the next study's
+clause. It is ahead of complexity alone by about +0.03 on each half, unresolved,
+ahead of a size-only weighting on one half, and no better than complexity
+alone in the threshold-free ranking; the next study's
 primary is that form against its size-only counterpart, and against CBO and
-RFC, on labels no one has read. A god method is a method whose length is an
-outlier for its codebase among the methods that make a call: the leaf
-exemption as a gate, with no amplification. It is ahead of the best complexity-alone signal by
-\expGateAnyConfirmVsTokens{} on the confirm half, resolved there and on the
-explore half in its internal-call form, needs no symbol resolution, and a search found no
-detection rule that states it; its nearest relatives, Brain Method and
-Intensive Coupling, point elsewhere. Both are post hoc and were found by
-searching; the power estimate from this study's intervals says the
-class-level claim needs either several times the labelled repositories or a
-better measure, and the method-level claim is within reach of the labels
-that exist.
+RFC, on labels no one has read. At method level the hypothesis is not a coupling form at all. A god
+method, as MLCQ's reviewers label one, is a method past an absolute length
+near twenty-five lines, leaf or not; the right detector for that label is a
+constant on length, which the companion study's tuned cutoff already
+reaches, and the per-repository rule is the wrong model for it. What
+remains to register at method level is whether the branchy-leaf exemption
+the reviews do show, a dense leaf complexity flags that reviewers decline
+to call a Long Method, adds anything to a constant on length, and whether
+the per-repository rule has a place at method level on code whose scale
+has moved, which is the purpose the plan stated and this data cannot test.
+Both hypotheses are post hoc and were found by searching; the power
+estimate from this study's intervals says the class-level claim needs
+either several times the labelled repositories or a better measure.
 
 \paragraph{The human Blob is weakly predicted by any of this.} Complexity
 alone reaches an MCC of \primXMcc{} against the reviewers on the confirm
@@ -1243,18 +1410,25 @@ receives more than it sends is called a Long Method less often, and such a
 class a God Class less often by Fontana's team, while MLCQ's reviewers call
 it a Blob not detectably less often. What the factor adds to the exemption,
 an amplification by the divergence of a junction, costs more than the
-exemption gains. The one component that carries a signal is the data a
-class sends out, resolved against both human class oracles and every
-class-level tool oracle, and subtracting what the class receives costs
-agreement in every family. The construct's verdict, by its pre-registered
-rule, is outgoing data only. A god class is a class that sends much out.
+exemption gains. At the registered operating point the one component that carries a signal
+is the data a class sends out, resolved against both human class oracles
+and every class-level tool oracle, and subtracting what the class receives
+costs agreement in every family; the construct's verdict, by its
+pre-registered rule, is outgoing data only. Read threshold-free, that gain
+is a flag rate on MLCQ and a better ranking only on Fontana, so a god class
+is a class that sends much out only in the sense that flagging more large
+classes finds more Blobs.
 How much of that is the size of the class, and what remains of coupling
 once size is held, are the questions this result leaves for a registered
-test, with the post hoc exploration's two forms as the hypotheses: total
-lines times outgoing calls for a class, and length among the methods that
-make any call for a method, the second of which lifts Long Method recovery
-from an MCC of \expTokensConfirmMcc{} to \expGateAnyConfirmMcc{} on the
-confirm half and is the clearest lead the study produced.
+test, with the post hoc exploration's reading as the hypothesis at class level,
+total lines times outgoing calls against its size-only counterpart. At
+method level the reviews settle more than the forms do: MLCQ's reviewers
+call a method a Long Method past about twenty-five lines, each within a few
+lines of the others, leaf or not; length ranks their verdicts best of
+everything measured; and a constant on length, not a per-repository
+outlier rule, is the detector that matches them. The per-repository rule's
+case rests on code whose scale has moved, and that is the test still to
+run.
 
 \section*{Competing interests}
 
