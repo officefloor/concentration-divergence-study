@@ -30,7 +30,10 @@ def write_json_gz(path: str, data) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".part"
     with gzip.open(tmp, "wt", encoding="utf-8") as fh:
-        json.dump(data, fh, separators=(",", ":"))
+        # dumps, not dump: dump streams through the pure-Python encoder, which recurses once per
+        # nested container and fails at the interpreter's limit on a deeply nested value (a
+        # live-width statement tree of a long else-if chain); dumps uses the C encoder
+        fh.write(json.dumps(data, separators=(",", ":")))
     os.replace(tmp, path)
 
 

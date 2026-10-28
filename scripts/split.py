@@ -32,10 +32,15 @@ static method of the same class reads as binding when it is not.
 """
 from __future__ import annotations
 
+import sys
 from bisect import bisect_left, bisect_right
 from dataclasses import dataclass, asdict, field
 
 import livewidth as lw
+
+# the search recurses once or twice per level of the statement tree, and an else-if chain nests
+# one level per branch (a CoreNLP method has hundreds); Python frames do not use the C stack
+sys.setrecursionlimit(max(sys.getrecursionlimit(), 100_000))
 
 # the width and cost a method gets when no segmentation reaches the cap: larger than any seam
 # the limits allow, so an absolute cutoff on width flags it, and a ranking puts it last
