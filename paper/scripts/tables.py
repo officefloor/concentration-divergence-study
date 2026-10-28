@@ -47,8 +47,8 @@ def num(v, d=3, signed=True):
     s = f"{v:+.{d}f}" if signed else f"{v:.{d}f}"
     if s.startswith("-"):
         s = "$-$" + s[1:]
-    if signed and s.startswith("+0.000") and d == 3 and abs(v) < 0.0005:
-        s = "0.000"
+    if signed and v == 0:
+        s = "0." + "0" * d
     return s
 
 
@@ -436,8 +436,6 @@ def main() -> int:
     body += arm_row("X$^*\\cdot$N, the size null", nn, sn["N_vs_X"])
     body += arm_row("X$^*\\cdot$D$_{\\text{flow}}$ with constructors as inputs", wc["arms"][wc["y"]], wc)
     oa = A["secondary"]["joined"]["other_arms"]
-    o_flow = [c for c in oa if c["y"] == "nloc_max*O_flow[A]"][0]
-    body += arm_row("X$^*\\cdot$O$_{\\text{flow}}$, outgoing factor only", o_flow["arms"][o_flow["y"]], o_flow)
     body += "\\bottomrule\n\\end{tabular}\n"
     write("tab_primary.tex", body)
 
@@ -1146,6 +1144,7 @@ def main() -> int:
         M("matchedNAucVsXConfirm", est(bc[nk]["auc_z_vs_base"])); M("matchedDAucVsXConfirm", est(bc[dk]["auc_z_vs_base"]))
         M("matchedSizeCallsAucVsXConfirm", est(bc[sk]["auc_z_vs_base"])); M("matchedSizeCallsAucVsXExplore", est(bx[sk]["auc_z_vs_base"]))
         M("matchedXOwnFlags", str(bc[xk]["own"]["flagged"])); M("matchedOOwnFlags", str(bc[ok]["own"]["flagged"]))
+        M("matchedOVsXFlagRatio", f"{bc[ok]['own']['flagged'] / bc[xk]['own']['flagged']:.1f}")
         M("matchedXOwnMcc", rate(bc[xk]["own"]["mcc"], 3)); M("matchedXMatchedMcc", rate(bc[xk]["matched"]["mcc"], 3))
         M("matchedXMatchedRecall", rate(bc[xk]["matched"]["recall"])); M("matchedXMatchedPrecision", rate(bc[xk]["matched"]["precision"]))
         M("matchedOMcc", rate(bc[ok]["own"]["mcc"], 3))

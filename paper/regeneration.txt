@@ -1,5 +1,5 @@
 How to regenerate every number in the paper
-  "Does coupling divergence tell a god unit from a complex algorithm?"
+  "What reviewers call a Long Method is a length"
 
 Every number the paper prints is produced by one script, paper/scripts/tables.py (in the harness
 repository, https://github.com/officefloor/concentration-divergence-study; not part of this
@@ -15,16 +15,16 @@ the prose, the script is the authority.
 ENVIRONMENT
   The harness's virtualenv (../.venv, from ../step1_setup.sh) runs the script; it imports the
   harness only for the optional count of the reviewed units the human populations leave out
-  (Section 6), which needs results/<set>/scores/*.npz. Without them the script still writes
+  (DEVIATIONS.md, 6), which needs results/<set>/scores/*.npz. Without them the script still writes
   every other macro and prints a note. pdflatex (TeX Live) builds the PDF.
 
 ALL AT ONCE (from the repository root)
   .venv/bin/python paper/scripts/tables.py     # generated/numbers.tex and generated/tab_*.tex
   cd paper && ./build.sh                       # main.pdf, abstract.txt, arxiv.tar.gz
 
-TABLES (generated/), in the order the paper places them
+TABLES (generated/), numbered as the full report places them; the paper places only tab_reviewers
   Table 1  tab_primary               primary/joined: arms, decomposition, size_null,
-                                     with_constructors; secondary/joined/other_arms (X*.O_flow)
+                                     with_constructors (X*.O_flow is Table 5, the full report)
   Table 2  tab_leaf                  leaf/joined; secondary/joined/method/leaf;
                                      secondary/joined/fontana/leaf
   Table 3  tab_cells_human           consistency/joined/cells, human oracles, flow
@@ -60,11 +60,11 @@ INLINE NUMBERS (generated/numbers.tex, about 800 macros)
                fontana, matrix) and the JavaParser-set counterparts named *Jp*
   sens*        sensitivity/joined and sensitivity/javaparser
   inter*       exploratory_intersection/joined
-  exp*         results/exploratory/ranking.<utc>.json, the post hoc exploration (paper, Section 5.2; full report, Section 5.9);
+  exp*         results/exploratory/ranking.<utc>.json, the post hoc exploration (paper, Section 4; full report, Section 5.9);
                --ranking FILE selects a file, the default is the latest
-  matched*     results/exploratory/matched.<utc>.json, ranking or flag rate (paper, Section 5.2; full report, Section 5.9); --matched FILE
-  log*         results/exploratory/log-matrix.<utc>.json, the log-scale matrix (paper, Section 5.2; full report, Section 5.9); --log-matrix FILE
-  rev*         results/exploratory/reviewers.<utc>.json, what the reviewers judge (paper, Section 5.2; full report, Section 5.9)
+  matched*     results/exploratory/matched.<utc>.json, ranking or flag rate (paper, Section 4; full report, Section 5.9); --matched FILE
+  log*         results/exploratory/log-matrix.<utc>.json, the log-scale matrix (paper, Section 4; full report, Section 5.9); --log-matrix FILE
+  rev*         results/exploratory/reviewers.<utc>.json, what the reviewers judge (paper, Section 4; full report, Section 5.9)
   join*, calls*, role*, throwNew*, di*, pruned*, files*, scale*, zero*, uncoupled*, labels*,
   agree*, pmdCog*, mlcq*, seedThree*, fontana*, validation*
                diagnostics/<set>, results/<set>/validation.json,
@@ -76,7 +76,7 @@ INLINE NUMBERS (generated/numbers.tex, about 800 macros)
   prior*, restored*
                results/analysis.v2.json and decisions/*.v1.json against the reported analysis
                and choices: every headline reading before and after the population fix
-               (Section 6, anc/DEVIATIONS.md)
+               (paper, Section 3; anc/DEVIATIONS.md)
 
 CONSTANTS TYPED BY HAND
   The outlier rule's 3.5, the gate's target half-width 0.10 and floor 20, the bootstrap's 2000

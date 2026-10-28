@@ -1,7 +1,6 @@
 # Ancillary data for the paper
 
-*Does coupling divergence tell a god unit from a complex algorithm? A pre-registered test of
-weighting complexity concentration by the data a unit hands on.* Daniel Sagenschneider, 2026.
+*What reviewers call a Long Method is a length. A pre-registered test of coupling divergence as a god-unit signal, and what it settled instead.* Daniel Sagenschneider, 2026.
 
 This directory holds the data the paper is computed from and the key to every public repository,
 commit, file and command involved. The paper itself names none of these; everything a reader
@@ -38,19 +37,19 @@ Everything is public and Apache-2.0 licensed unless stated.
 | `analysis.v1.json`, `.sha256` | The first confirmatory analysis (2026-10-26 08:04 UTC, commit `a809d0a`, sha256 `d64d4c8d…`), set aside by Amendment 9 because Fontana's archives had resolved for 19 of 73 systems; none of its results had been read. |
 | `analysis.v2.json`, `.sha256` | The second (2026-10-26 09:49 UTC, commit `4d73bc1`, sha256 `9519e246…`), set aside by Amendment 10: the human populations held only the repositories with a positive. Its results had been read and reported to the author in a draft of the paper before the fault was found. `DEVIATIONS.md` tabulates every headline reading of this file against the reported one. |
 | `analysis.exploratory.<utc>.json` | Any later re-analysis (none existed when the paper was built). |
-| `matched.<utc>.json`, `.sha256` | **Ranking or flag rate** (paper, Section 5.2; full report, Section 5.9): for the registered arms and the exploratory forms, the threshold-free pooled AUC of the per-repository modified z and of the per-repository percentile over the reviewed units, with the paired bootstrap against X\*, and every form read at a matched flag rate (the constant that gives it as many flags over every unit as X\*·O_flow has at 3.5; at method level as tokens has), by `scripts/exploratory_matched.py`. Post hoc. |
+| `matched.<utc>.json`, `.sha256` | **Ranking or flag rate** (paper, Section 4; full report, Section 5.9): for the registered arms and the exploratory forms, the threshold-free pooled AUC of the per-repository modified z and of the per-repository percentile over the reviewed units, with the paired bootstrap against X\*, and every form read at a matched flag rate (the constant that gives it as many flags over every unit as X\*·O_flow has at 3.5; at method level as tokens has), by `scripts/exploratory_matched.py`. Post hoc. |
 | `log-matrix.<utc>.json`, `.sha256` | The registered matrix with ln(1 + X) in place of every complexity signal X, scored by the registered rule against every oracle and paired with the raw form from the score files, by `scripts/exploratory_log_matrix.py`. Post hoc; reported in one sentence of the full report's Section 5.9 because a logarithm compresses the tail and the rule then flags almost nothing. |
-| `reviewers.<utc>.json`, `.sha256` | **What the reviewers judge** (paper, Section 5.2; full report, Section 5.9): MLCQ's individual reviews (reviewer, severity) joined to the measured units, by `scripts/exploratory_reviewers.py`: the Long Method rate by length bin for leaves (no internal call) and the rest, per reviewer, the disagreement among multiply reviewed samples, each reviewer's own best length cutoff, and the Blob rate and disagreement by class size. Post hoc. |
-| `livewidth.<utc>.json`, `.sha256`; `livewidth-units.<utc>.csv.gz`, `.sha256` | **Live width** (paper, Section 5.2; full report, Section 5.9): a second measurer pass over every measured repository (`LiveWidth`, no symbol solver) records each method's variables, their reference and definition lines, its loops, calls and statement tree; `scripts/exploratory_livewidth.py` scores the live width a reader holds at a line (several definitions), the variable counts and the data flow against every oracle by the registered rule and by absolute cutoffs chosen on the explore half and read on the confirm half, length among them. The cutoff on length is the constant the paper reports. The units file holds every reviewed method's values. Post hoc (step 13). |
-| `split.<utc>.json`, `.sha256`; `split-units.<utc>.csv.gz`, `.sha256` | **The split cost** (paper, Section 5.2; full report, Section 5.9): for every method at or over the constant, the cheapest segmentation into pieces under it (`scripts/split.py` over the live-width facts): the worst seam, its cost (a parameter one, a single return one, a second return value a record at three per value), its binding to the class, and the structural-only, no-input-limit and records (several returns allowed) variants, scored by `scripts/exploratory_split.py` as the live width is, with the AUC among the long methods only and the locked share at class level. The units file holds every reviewed method's values and the cuts of its best segmentation. Post hoc (step 14). |
-| `ranking.<utc>.json`, `.sha256` | **The post hoc exploration** (paper, Section 5.2; full report, Section 5.9): every candidate form built from size and outgoing calls, scored from the raw records by `scripts/exploratory_ranking.py` (in the harness repository) by the registered rule against every oracle, with paired bootstrap differences against the best complexity-alone signal and the size-only counterparts. Made after every oracle had been read; labelled `kind: exploratory`; its `harness_commit` is inside it and its digest in `analysis-hashes.txt`. |
+| `reviewers.<utc>.json`, `.sha256` | **What the reviewers judge** (paper, Section 4; full report, Section 5.9): MLCQ's individual reviews (reviewer, severity) joined to the measured units, by `scripts/exploratory_reviewers.py`: the Long Method rate by length bin for leaves (no internal call) and the rest, per reviewer, the disagreement among multiply reviewed samples, each reviewer's own best length cutoff, and the Blob rate and disagreement by class size. Post hoc. |
+| `livewidth.<utc>.json`, `.sha256`; `livewidth-units.<utc>.csv.gz`, `.sha256` | **Live width** (paper, Section 4; full report, Section 5.9): a second measurer pass over every measured repository (`LiveWidth`, no symbol solver) records each method's variables, their reference and definition lines, its loops, calls and statement tree; `scripts/exploratory_livewidth.py` scores the live width a reader holds at a line (several definitions), the variable counts and the data flow against every oracle by the registered rule and by absolute cutoffs chosen on the explore half and read on the confirm half, length among them. The cutoff on length is the constant the paper reports. The units file holds every reviewed method's values. Post hoc (step 13). |
+| `split.<utc>.json`, `.sha256`; `split-units.<utc>.csv.gz`, `.sha256` | **The split cost** (paper, Section 4; full report, Section 5.9): for every method at or over the constant, the cheapest segmentation into pieces under it (`scripts/split.py` over the live-width facts): the worst seam, its cost (a parameter one, a single return one, a second return value a record at three per value), its binding to the class, and the structural-only, no-input-limit and records (several returns allowed) variants, scored by `scripts/exploratory_split.py` as the live width is, with the AUC among the long methods only and the locked share at class level. The units file holds every reviewed method's values and the cuts of its best segmentation. Post hoc (step 14). |
+| `ranking.<utc>.json`, `.sha256` | **The post hoc exploration** (paper, Section 4; full report, Section 5.9): every candidate form built from size and outgoing calls, scored from the raw records by `scripts/exploratory_ranking.py` (in the harness repository) by the registered rule against every oracle, with paired bootstrap differences against the best complexity-alone signal and the size-only counterparts. Made after every oracle had been read; labelled `kind: exploratory`; its `harness_commit` is inside it and its digest in `analysis-hashes.txt`. |
 | `analysis-hashes.txt` | The committed digests of the analyses, the decisions, the labels, the samples and each set's run and validation records. |
 
 ### `decisions/` : the explore-half choices
 
 | File | What it is |
 |---|---|
-| `explore-choices.json` | X\*, X\*\_m, the effective-sample gate and every candidate's criterion, made on the MLCQ explore half by the registered rules (its `made_utc` and `harness_commit` are inside it); the paper's Section 5.1 (full report, Section 5.2). |
+| `explore-choices.json` | X\*, X\*\_m, the effective-sample gate and every candidate's criterion, made on the MLCQ explore half by the registered rules (its `made_utc` and `harness_commit` are inside it); the paper's Section 3 (full report, Section 5.2). |
 | `measurer-validation.mlcq-explore.json` | The measurer's agreement with paper one's extractor and its resolution rates on the explore half. |
 | `explore-choices.v1.json`, `measurer-validation.mlcq-explore.v1.json` | The choices first made (2026-10-26 07:54 UTC, commit `a809d0a`) on the populations restricted to the repositories with a positive, set aside by Amendment 10 and kept with their digests. |
 | `DEVIATIONS.md` (at `anc/`) | The full account of every deviation from the plan, written by `paper/scripts/tables.py` from the analysis files: the population fault and what it restored, the three confirmatory analyses, the amendments, the measurement faults, the gate, and the labelled units that land on no measured unit. |
@@ -113,7 +112,7 @@ did, for as long as GitHub serves those commits and the corpus serves its archiv
 measurer's time budget (8 hours per repository) and heap (`CDS_MEASURER_HEAP=9g`) are the
 constants recorded in `concentration_divergence_study/pins.py`.
 
-### The post hoc exploration (paper, Section 5.2; full report, Section 5.9)
+### The post hoc exploration (paper, Section 4; full report, Section 5.9)
 
     .venv/bin/python scripts/exploratory_ranking.py              # every set, mad_z, ~5 minutes
     .venv/bin/python scripts/exploratory_ranking.py --all-rules  # every rule of paper one
@@ -135,9 +134,9 @@ The paper's generator reads the latest of each (`--matched FILE`, `--log-matrix 
     ./step14_explore_split.sh         # the split cost over step 13's facts, no fetching, ~3 hours
 
 The paper's generator reads the latest `livewidth.*.json` and `split.*.json` for the constant on
-length and the readings against it (paper, Section 5.2; full report, Section 5.9, *A constant on length, and what was tried against it*).
+length and the readings against it (paper, Section 4; full report, Section 5.9, *A constant on length, and what was tried against it*).
 
-### The population fault (paper, Section 6; `DEVIATIONS.md`, 1)
+### The population fault (paper, Section 3; `DEVIATIONS.md`, 1)
 
 The condition that attaches a human definition to a repository's score is in
 `concentration_divergence_study/units.py` (`_oracles_from_idx` for the joined set, `javaparser_set`

@@ -1,4 +1,4 @@
-# Concentration divergence: does coupling divergence tell a god unit from a complex algorithm?
+# Concentration divergence: what reviewers call a Long Method is a length
 
 The measurement harness for the study pre-registered in [`PLAN.md`](PLAN.md) (tag `plan-v1`),
 on the construct in [`SINEW.md`](SINEW.md). It asks whether weighting a Java unit's complexity

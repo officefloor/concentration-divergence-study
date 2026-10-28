@@ -1,9 +1,9 @@
 # Deviations from the plan
 
-*Does coupling divergence tell a god unit from a complex algorithm?* Daniel Sagenschneider, 2026.
+*What reviewers call a Long Method is a length.* Daniel Sagenschneider, 2026.
 
 This is the full account of every departure of the analysis as run from the plan as registered
-(`PLAN.md`, tag `plan-v1`, 20 October 2026). The paper's Section 6 summarises it; every number
+(`PLAN.md`, tag `plan-v1`, 20 October 2026). The paper's Section 3 summarises it; every number
 here is written by `paper/scripts/tables.py` from the analysis files named in `README.md`; a
 value reads `n/a` where its file is absent. Amendments to the plan are each a dated commit stating what had been seen when it was made; this document says what each one
 changed in what the paper reports.
@@ -150,7 +150,7 @@ trove's benchmark classes, all negatives, outside its source jar.
 ## 7. A post hoc exploration after every oracle had been read
 
 After the confirmatory analysis on the registered populations was read, the candidate forms
-the full report's Section 5.9 reports (the paper's Section 5.2) (size times outgoing calls at class level; the "makes a call"
+the full report's Section 5.9 reports (the paper's Section 4) (size times outgoing calls at class level; the "makes a call"
 gate at method level) were computed from the raw records by `scripts/exploratory_ranking.py`
 (20261026 232945 UTC, sha256 `4bd479a1814c…`), read at a matched flag rate and as a threshold-free
 AUC by `scripts/exploratory_matched.py` (20261026 234905 UTC, sha256 `d6b77463f469…`), and the

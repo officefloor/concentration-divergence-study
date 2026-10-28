@@ -1,7 +1,6 @@
 # The paper
 
-*Does coupling divergence tell a god unit from a complex algorithm? A pre-registered test of
-weighting complexity concentration by the data a unit hands on.*
+*What reviewers call a Long Method is a length. A pre-registered test of coupling divergence as a god-unit signal, and what it settled instead.*
 
 ## What is here
 
