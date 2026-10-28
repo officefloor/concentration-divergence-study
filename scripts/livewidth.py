@@ -4,7 +4,11 @@
 Written after every oracle of the study had been read (PLAN.md, Amendments, 10): nothing it
 measures is confirmatory, and it changes no verdict. It measures what the stored records cannot
 give, because they keep no source: per method, every variable's live range (first reference to
-last, in line order) and how often it is assigned. A method's width at a line is the sum of the
+last, in line order), the lines it is used at, and how often it is assigned. A variable declared
+with no value or a literal one starts at its first use, since the declaration could move there
+without changing the method (the declaration-start reading is kept as a variant). The method's
+statement tree is recorded too, so a reader can tell where a cut may fall. A method's
+width at a line is the sum of the
 weights of the variables live there, and its live width is the largest such width: what has to
 be held in mind at the hardest point of reading it, against the 4 +- 1 (Cowan) or 7 +- 2
 (Miller) a reader can hold. The prior measures it builds on, and the gaps it closes, are in
@@ -41,12 +45,30 @@ sys.path.insert(0, ROOT)
 from concentration_divergence_study import pins, records  # noqa: E402
 
 MAIN = "net.officefloor.divergence.LiveWidth"
-SCHEMA = 2                                  # LiveWidth.SCHEMA
+SCHEMA = 3                                  # LiveWidth.SCHEMA
 OUT = os.path.join(pins.RESULTS, "exploratory", "livewidth")
 
-# a variable's facts, and a call's, as LiveWidth.java writes them
-NAME, KIND, FIRST, LAST, LOOP_FIRST, LOOP_LAST, DEFS, STEPS, MUTS, FROM = range(10)
+# a variable's facts, and a call's, as LiveWidth.java writes them: the range from the first
+# reference (a literal declaration included) to the last, as text and widened over loops; the
+# definitions, steps and writes into it; the variables it is computed from; whether it is a
+# literal declaration (LIT); the range start from the first use instead (USE_FIRST, as text;
+# USE_LOOP_FIRST, over loops); the distinct lines it is used at (REFS); the distinct lines of
+# its definitions that have a line (DEF_LINES: an initializer, a binding, an assignment, an
+# increment; not a parameter's argument or a field's prior state); and the lines of the writes
+# into its object (MUT_LINES)
+(NAME, KIND, FIRST, LAST, LOOP_FIRST, LOOP_LAST, DEFS, STEPS, MUTS, FROM,
+ LIT, USE_FIRST, USE_LOOP_FIRST, REFS, DEF_LINES, MUT_LINES) = range(16)
 C_LINE, C_ARGS, C_RECEIVER, C_RESULT = range(4)
+# a node of the method's statement tree (m["tree"], the body): its first and last line, whether
+# it is a sequence (a block, a switch entry: its children are statements in order, and any
+# contiguous run of them is what Extract Method can move) or a statement (its children are the
+# sequences and statements directly inside it), its kind, and its children
+S_START, S_END, S_SEQ, S_KIND, S_KIDS = range(5)
+# the kinds: the jumps say whether a run can be moved, 6 to 9 are where developers cut
+(K_OTHER, K_RETURN, K_BREAK, K_CONTINUE, K_THROW, K_YIELD, K_IF, K_LOOP, K_TRY, K_SWITCH,
+ K_SYNCHRONIZED, K_LABELED, K_BLOCK, K_ENTRY) = range(14)
+JUMPS = (K_RETURN, K_BREAK, K_CONTINUE, K_THROW, K_YIELD)
+STRUCTURAL = (K_IF, K_LOOP, K_TRY, K_SWITCH)
 PARAM, LOCAL, FIELD = 0, 1, 2
 
 # The variants: which variables (locals: parameters and locals; all: fields too), the range
@@ -54,10 +76,13 @@ PARAM, LOCAL, FIELD = 0, 1, 2
 # and declared outside of), the weight (unit: 1, the unweighted count; assign: every definition
 # and write into it; role: 1 plus the definitions that are not steps, plus writes into it, so a
 # value set once and a loop counter are 1, Sajaniemi's fixed value and stepper), and where a
-# parameter's range starts (use: its first reference; sig: the signature).
+# range starts (use: the first use, so a parameter from its first reference and a local declared
+# with no value or a literal one from its first use, not its declaration; decl: such a local from
+# its declaration; sig: a parameter from the signature).
 SCOPES = {"locals": (PARAM, LOCAL), "all": (PARAM, LOCAL, FIELD)}
 FLOWS = ("text", "loop")
 WEIGHTS = ("unit", "assign", "role")
+STARTS = ("use", "decl", "sig")
 HEADLINE = ("loop", "role", "all", "use")
 # the widths an absolute threshold is read at: below, at and above the working-memory span
 OVER = (3, 4, 5, 6, 7, 8, 9)
@@ -65,12 +90,13 @@ OVER = (3, 4, 5, 6, 7, 8, 9)
 
 def variants() -> list[tuple]:
     out = [(f, w, s, "use") for f in FLOWS for w in WEIGHTS for s in SCOPES]
+    out.append(("loop", "role", "all", "decl"))
     out.append(("loop", "role", "all", "sig"))
     return out
 
 
 def label(v: tuple) -> str:
-    return "[" + ",".join(v if v[3] == "sig" else v[:3]) + "]"
+    return "[" + ",".join(v[:3] if v[3] == "use" else v) + "]"
 
 
 def weight(var: list, how: str) -> float:
@@ -89,7 +115,10 @@ def widths(m: dict, variant: tuple) -> np.ndarray:
     lines = np.asarray(m["lines"], float)
     if not vs or not len(lines):
         return np.zeros(len(lines))
-    lo = np.array([v[LOOP_FIRST] if flow == "loop" else v[FIRST] for v in vs], float)
+    if start == "decl":
+        lo = np.array([v[LOOP_FIRST] if flow == "loop" else v[FIRST] for v in vs], float)
+    else:
+        lo = np.array([v[USE_LOOP_FIRST] if flow == "loop" else v[USE_FIRST] for v in vs], float)
     hi = np.array([v[LOOP_LAST] if flow == "loop" else v[LAST] for v in vs], float)
     if start == "sig":
         lo = np.where([v[KIND] == PARAM for v in vs], m["name_line"], lo)
@@ -127,6 +156,19 @@ def counts(m: dict) -> dict:
             "weighted": float(sum(weight(v, "role") for v in vs))}
 
 
+def sequences(tree: list) -> list[list[tuple[int, int]]]:
+    """Every sequence of the tree, outermost first, as the line ranges of its statements in
+    order: the places a cut may fall are between two statements of one sequence."""
+    out = []
+    todo = [tree]
+    while todo:
+        n = todo.pop(0)
+        if n[S_SEQ]:
+            out.append([(k[S_START], k[S_END]) for k in n[S_KIDS]])
+        todo.extend(n[S_KIDS])
+    return out
+
+
 # How data moves through a method, from what enters it to the calls it fans out to (only the
 # calls that resolve to an analysed file: the measurer's internal calls, its sinew).
 #   in_params, in_fields, in_results  what enters: parameters and fields referenced, and the
@@ -142,8 +184,9 @@ def counts(m: dict) -> dict:
 #   in_through                        parameters and fields passed to an internal call as they
 #                                     came (never reassigned): a pipe strand
 #   in_caught                         entering variables that reach no internal call
-#   bridging                          variables live (the loop range) at two or more lines with an
-#                                     internal call: state held across calls
+#   bridging                          variables live (the headline range: loops, first use) at
+#                                     two or more lines with an internal call: state held
+#                                     across calls
 #   lw_at_calls                       the headline width at the lines with an internal call
 FLOW = ("in_params", "in_fields", "in_results", "in_all", "max_from", "derived", "out_vars",
         "max_fanout", "in_out", "in_through", "in_caught", "bridging", "lw_at_calls")
@@ -180,7 +223,8 @@ def flow(m: dict, internal: list) -> dict:
         return False
     in_out = sum(reaches_out(u) for u in incoming)
     call_lines = sorted({c[C_LINE] for c in calls})
-    bridging = sum(sum(v[LOOP_FIRST] <= ln <= v[LOOP_LAST] for ln in call_lines) >= 2 for v in vs)
+    bridging = sum(sum(v[USE_LOOP_FIRST] <= ln <= v[LOOP_LAST] for ln in call_lines) >= 2
+                   for v in vs)
     at_calls = 0.0
     if call_lines and m["lines"]:
         w = dict(zip(m["lines"], widths(m, HEADLINE)))
@@ -348,26 +392,58 @@ public class F {
         n = n + 1;
         switch (n) { case 1: return count; default: return n; }
     }
+    int lit(int n) {
+        int k = 0;
+        String s = null;
+        int unused = -1;
+        int w;
+        if (n > 0) { k = n; }
+        w = k + 1;
+        return w + (s == null ? 0 : s.length());
+    }
 }
 """}
 # (method, name line) -> {variable: [kind, first, last, loop_first, loop_last, defs, steps, muts,
-# [the variables it is computed from]]}
+# [the variables it is computed from], lit, use_first, use_loop_first, [the lines it is used at],
+# [the lines it is defined at], [the lines its object is written into at]]}
 EXPECTED = {
-    ("seq", 5): {"a": [0, 6, 6, 6, 6, 1, 0, 0, []], "b": [0, 8, 8, 8, 8, 1, 0, 0, []],
-                 "x": [1, 6, 7, 6, 7, 1, 0, 0, ["a"]], "y": [1, 7, 8, 7, 8, 1, 0, 0, ["x"]],
-                 "z": [1, 8, 9, 8, 9, 1, 0, 0, ["b", "y"]]},
-    ("loop", 11): {"items": [0, 14, 17, 13, 17, 1, 0, 0, []], "limit": [0, 13, 13, 13, 16, 1, 0, 0, []],
-                   "sum": [1, 12, 22, 12, 22, 2, 0, 0, ["s"]], "i": [1, 13, 14, 13, 14, 2, 1, 0, []],
-                   "s": [1, 14, 15, 14, 15, 1, 0, 0, ["i", "items"]],
-                   "t": [1, 17, 17, 17, 17, 1, 0, 0, ["items"]],
-                   "arr": [1, 18, 19, 18, 19, 1, 0, 1, ["sum"]],
-                   "r": [1, 20, 20, 20, 20, 1, 0, 0, ["count", "q"]],
-                   "q": [1, 20, 20, 20, 20, 1, 0, 0, []], "o": [1, 21, 21, 21, 21, 1, 0, 0, []],
-                   "e": [1, 22, 22, 22, 22, 1, 0, 0, []], "count": [2, 17, 20, 17, 20, 2, 1, 0, []]},
-    ("toString", 21): {"inner": [1, 21, 21, 21, 21, 1, 0, 0, []]},
-    ("pat", 24): {"o": [0, 25, 25, 25, 25, 1, 0, 0, []], "n": [0, 25, 27, 25, 27, 3, 0, 0, ["str"]],
-                  "str": [1, 25, 25, 25, 25, 1, 0, 0, ["o"]],
-                  "count": [2, 27, 27, 27, 27, 1, 0, 0, []]},
+    ("seq", 5): {"a": [0, 6, 6, 6, 6, 1, 0, 0, [], 0, 6, 6, [6], [], []],
+                 "b": [0, 8, 8, 8, 8, 1, 0, 0, [], 0, 8, 8, [8], [], []],
+                 "x": [1, 6, 7, 6, 7, 1, 0, 0, ["a"], 0, 6, 6, [6, 7], [6], []],
+                 "y": [1, 7, 8, 7, 8, 1, 0, 0, ["x"], 0, 7, 7, [7, 8], [7], []],
+                 "z": [1, 8, 9, 8, 9, 1, 0, 0, ["b", "y"], 0, 8, 8, [8, 9], [8], []]},
+    ("loop", 11): {"items": [0, 14, 17, 13, 17, 1, 0, 0, [], 0, 14, 13, [14, 17], [], []],
+                   "limit": [0, 13, 13, 13, 16, 1, 0, 0, [], 0, 13, 13, [13], [], []],
+                   # sum = 0 at line 12 is a literal declaration: first use at 15, in the loop;
+                   # defined at 12 (the initializer) and 15 (+=)
+                   "sum": [1, 12, 22, 12, 22, 2, 0, 0, ["s"], 1, 15, 13, [15, 19, 22], [12, 15], []],
+                   "i": [1, 13, 14, 13, 14, 2, 1, 0, [], 1, 13, 13, [13, 14], [13], []],
+                   "s": [1, 14, 15, 14, 15, 1, 0, 0, ["i", "items"], 0, 14, 14, [14, 15], [14], []],
+                   "t": [1, 17, 17, 17, 17, 1, 0, 0, ["items"], 0, 17, 17, [17], [17], []],
+                   # arr[0] = sum at 19 is a write into arr, not a definition of it
+                   "arr": [1, 18, 19, 18, 19, 1, 0, 1, ["sum"], 0, 18, 18, [18, 19], [18], [19]],
+                   "r": [1, 20, 20, 20, 20, 1, 0, 0, ["count", "q"], 0, 20, 20, [20], [20], []],
+                   "q": [1, 20, 20, 20, 20, 1, 0, 0, [], 1, 20, 20, [20], [20], []],
+                   "o": [1, 21, 21, 21, 21, 1, 0, 0, [], 0, 21, 21, [21], [21], []],
+                   "e": [1, 22, 22, 22, 22, 1, 0, 0, [], 0, 22, 22, [22], [22], []],
+                   # a field: its prior state has no line; this.count++ at 17 does
+                   "count": [2, 17, 20, 17, 20, 2, 1, 0, [], 0, 17, 17, [17, 20], [17], []]},
+    ("toString", 21): {"inner": [1, 21, 21, 21, 21, 1, 0, 0, [], 1, 21, 21, [21], [21], []]},
+    ("pat", 24): {"o": [0, 25, 25, 25, 25, 1, 0, 0, [], 0, 25, 25, [25], [], []],
+                  "n": [0, 25, 27, 25, 27, 3, 0, 0, ["str"], 0, 25, 25, [25, 26, 27], [25, 26], []],
+                  "str": [1, 25, 25, 25, 25, 1, 0, 0, ["o"], 0, 25, 25, [25], [25], []],
+                  "count": [2, 27, 27, 27, 27, 1, 0, 0, [], 0, 27, 27, [27], [], []]},
+    # the literal rule: k = 0, s = null and unused = -1 are declared at 30-32; k is first used
+    # at 34 and s at 36, so their use ranges start there, while first keeps the declaration;
+    # unused has no use, so its range is its declaration; the initializer still counts as a
+    # definition (k: 2 defs, at 30 and 34). w is declared with no value at 33: never a
+    # reference, so both starts are its first use at 35, and its one definition is that
+    # assignment
+    ("lit", 29): {"n": [0, 34, 34, 34, 34, 1, 0, 0, [], 0, 34, 34, [34], [], []],
+                  "k": [1, 30, 35, 30, 35, 2, 0, 0, ["n"], 1, 34, 34, [34, 35], [30, 34], []],
+                  "s": [1, 31, 36, 31, 36, 1, 0, 0, [], 1, 36, 36, [36], [31], []],
+                  "unused": [1, 32, 32, 32, 32, 1, 0, 0, [], 1, 32, 32, [], [32], []],
+                  "w": [1, 35, 36, 35, 36, 1, 0, 0, ["k"], 1, 35, 35, [35, 36], [35], []]},
 }
 # (method, name line) -> [[line, [arguments], [receiver], result]], in the measurer's call order
 EXPECTED_CALLS = {
@@ -376,6 +452,29 @@ EXPECTED_CALLS = {
                    [21, [], [], "o"], [22, ["sum"], [], None], [22, [], ["e"], None]],
     ("toString", 21): [],
     ("pat", 24): [[25, [], ["str"], "n"]],
+    ("lit", 29): [[36, [], ["s"], None]],
+}
+# (method, name line) -> the statement tree [first, last, seq, kind, children]; the loop method
+# shows a for body, a for-each body, a lambda's block body and a try with its catch, each a
+# sequence inside its statement, and the anonymous class at line 21 left out; the kinds mark
+# the loops (7), the try (8), the if (6), the switch (9) and its entries (13), and the returns (1)
+EXPECTED_TREE = {
+    ("loop", 11): [11, 23, 1, 12, [[12, 12, 0, 0, []],
+                                   [13, 16, 0, 7, [[13, 16, 1, 12, [[14, 14, 0, 0, []], [15, 15, 0, 0, []]]]]],
+                                   [17, 17, 0, 7, [[17, 17, 1, 12, [[17, 17, 0, 0, []]]]]],
+                                   [18, 18, 0, 0, []], [19, 19, 0, 0, []],
+                                   [20, 20, 0, 0, [[20, 20, 1, 12, [[20, 20, 0, 0, []], [20, 20, 0, 0, []]]]]],
+                                   [21, 21, 0, 0, []],
+                                   [22, 22, 0, 8, [[22, 22, 1, 12, [[22, 22, 0, 1, []]]],
+                                                   [22, 22, 1, 12, [[22, 22, 0, 1, []]]]]]]],
+    ("pat", 24): [24, 28, 1, 12, [[25, 25, 0, 6, [[25, 25, 1, 12, [[25, 25, 0, 0, []]]]]],
+                                  [26, 26, 0, 0, []],
+                                  [27, 27, 0, 9, [[27, 27, 1, 13, [[27, 27, 0, 1, []]]],
+                                                  [27, 27, 1, 13, [[27, 27, 0, 1, []]]]]]]],
+    ("lit", 29): [29, 37, 1, 12, [[30, 30, 0, 0, []], [31, 31, 0, 0, []], [32, 32, 0, 0, []],
+                                  [33, 33, 0, 0, []],
+                                  [34, 34, 0, 6, [[34, 34, 1, 12, [[34, 34, 0, 0, []]]]]],
+                                  [35, 35, 0, 0, []], [36, 36, 0, 1, []]]],
 }
 
 
@@ -403,7 +502,8 @@ def check(jar: str = pins.MEASURER_JAR) -> list[str]:
         for m in f["methods"]:
             names = [v[NAME] for v in m["vars"]]
             key = (m["name"], m["name_line"])
-            got[key] = {v[NAME]: v[KIND:FROM] + [sorted(names[i] for i in v[FROM])] for v in m["vars"]}
+            got[key] = {v[NAME]: v[KIND:FROM] + [sorted(names[i] for i in v[FROM])] + v[LIT:]
+                        for v in m["vars"]}
             got_calls[key] = [[c[C_LINE], sorted(names[i] for i in c[C_ARGS]),
                                sorted(names[i] for i in c[C_RECEIVER]),
                                names[c[C_RESULT]] if c[C_RESULT] >= 0 else None] for c in m["calls"]]
@@ -411,6 +511,9 @@ def check(jar: str = pins.MEASURER_JAR) -> list[str]:
                 for k, want in EXPECTED.items() if got.get(k) != want]
     problems += [f"live-width fixture calls {k}: got {got_calls.get(k)}, expected {want}"
                  for k, want in EXPECTED_CALLS.items() if got_calls.get(k) != want]
+    got_tree = {(m["name"], m["name_line"]): m.get("tree") for f in doc["files"] for m in f["methods"]}
+    problems += [f"live-width fixture tree {k}: got {got_tree.get(k)}, expected {want}"
+                 for k, want in EXPECTED_TREE.items() if got_tree.get(k) != want]
     extra = set(got) - set(EXPECTED)
     if extra:
         problems.append(f"live-width fixture: unexpected units {sorted(extra)}")

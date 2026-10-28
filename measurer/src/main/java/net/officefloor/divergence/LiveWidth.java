@@ -35,13 +35,16 @@ import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.ArrayAccessExpr;
 import com.github.javaparser.ast.expr.AssignExpr;
+import com.github.javaparser.ast.expr.CastExpr;
 import com.github.javaparser.ast.expr.CharLiteralExpr;
 import com.github.javaparser.ast.expr.DoubleLiteralExpr;
+import com.github.javaparser.ast.expr.EnclosedExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.FieldAccessExpr;
 import com.github.javaparser.ast.expr.InstanceOfExpr;
 import com.github.javaparser.ast.expr.IntegerLiteralExpr;
 import com.github.javaparser.ast.expr.LambdaExpr;
+import com.github.javaparser.ast.expr.LiteralExpr;
 import com.github.javaparser.ast.expr.LongLiteralExpr;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
@@ -51,15 +54,25 @@ import com.github.javaparser.ast.expr.ThisExpr;
 import com.github.javaparser.ast.expr.TypePatternExpr;
 import com.github.javaparser.ast.expr.UnaryExpr;
 import com.github.javaparser.ast.expr.VariableDeclarationExpr;
+import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.BreakStmt;
 import com.github.javaparser.ast.stmt.CatchClause;
+import com.github.javaparser.ast.stmt.ContinueStmt;
 import com.github.javaparser.ast.stmt.DoStmt;
 import com.github.javaparser.ast.stmt.ExplicitConstructorInvocationStmt;
 import com.github.javaparser.ast.stmt.ForEachStmt;
 import com.github.javaparser.ast.stmt.ForStmt;
+import com.github.javaparser.ast.stmt.IfStmt;
+import com.github.javaparser.ast.stmt.LabeledStmt;
+import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.stmt.SwitchEntry;
+import com.github.javaparser.ast.stmt.SwitchStmt;
+import com.github.javaparser.ast.stmt.SynchronizedStmt;
+import com.github.javaparser.ast.stmt.ThrowStmt;
 import com.github.javaparser.ast.stmt.TryStmt;
 import com.github.javaparser.ast.stmt.WhileStmt;
+import com.github.javaparser.ast.stmt.YieldStmt;
 
 /**
  * EXPLORATORY, POST HOC (PLAN.md, Amendments, 10: every oracle had been read when this was
@@ -84,7 +97,23 @@ import com.github.javaparser.ast.stmt.WhileStmt;
  * enum constant as a {@code case} label.</li>
  * <li><b>References:</b> every use of the variable, a write included; a declarator's
  * initializer, a for-each variable and a pattern are references at their own line. A
- * parameter's declaration is not a reference (its signature line is written beside it).</li>
+ * parameter's declaration is not a reference (its signature line is written beside it).
+ * <b>The literal rule:</b> a local declared with no initializer, or with a literal one
+ * ({@code 0}, {@code -1}, {@code null}, {@code ""}, {@code false}, a cast or parenthesised
+ * literal), depends on nothing above it, so the declaration could move down to the first use
+ * without changing the method. Its declaration is not a use: {@code use_first} (and the loop
+ * extent {@code use_loop_first}) start at the first use. {@code first} is as it always was (a
+ * literal initializer is in the range, a declaration without a value is not a reference), so
+ * the two readings can be compared. {@code lit} marks such a variable. The declaration still
+ * counts as a definition when it has an initializer.</li>
+ * <li><b>Reference lines</b> ({@code refs}): the distinct lines of the variable's uses, in
+ * order, a literal declaration excluded. A reader can see from them where the variable is
+ * touched, not only the range it is live over. <b>Definition lines</b> ({@code def_lines}):
+ * the distinct lines of the definitions that have one (an initializer, a literal one included;
+ * a for-each, catch, lambda or pattern binding; every assignment and increment); a parameter's
+ * argument and a field's prior state have no line. <b>Write lines</b> ({@code mut_lines}): the
+ * lines of the writes into the variable's object. So a reader can tell a read from a write at
+ * any line, which the reference lines alone cannot.</li>
  * <li><b>Definitions</b> ({@code defs}): the value a variable enters with (a parameter's
  * argument, a field's prior state, a catch, lambda, for-each or pattern binding, an
  * initializer), plus every assignment and increment of the name. {@code steps}: the definitions
@@ -104,6 +133,17 @@ import com.github.javaparser.ast.stmt.WhileStmt;
  * variables referenced in its arguments, the variable it is called on (a simple name or
  * {@code this.x} as the receiver), and the variable whose definition it is part of, if any
  * (the call's result flows into it).</li>
+ * <li><b>Statement tree</b> ({@code tree}): the method body as nested ranges, so a reader can
+ * tell where a cut may fall. Each node is {@code [first line, last line, seq, kind, children]}:
+ * {@code seq} is 1 for a sequence (a block, a switch entry, a lambda's block body), whose
+ * children are the statements in it in order, and 0 for a statement, whose children are the
+ * sequences and statements directly inside it (an if's arms, a loop's body, a try's block and
+ * catch bodies). {@code kind} names the statement: 0 any other (an expression, a declaration,
+ * an assert), 1 return, 2 break, 3 continue, 4 throw, 5 yield, 6 if, 7 a loop (for, for-each,
+ * while, do), 8 try, 9 switch, 10 synchronized, 11 labeled, 12 a block, 13 a switch entry. The
+ * jumps (1 to 5) say whether a run can be moved; 6 to 9 are the structural cues developers cut
+ * at. A contiguous run of a sequence's children is the unit Extract Method moves; nested type
+ * bodies are not the method's own and are left out, as everywhere here.</li>
  * </ul>
  */
 public final class LiveWidth {
@@ -111,7 +151,7 @@ public final class LiveWidth {
 	static final int PARAM = 0, LOCAL = 1, FIELD = 2;
 
 	/** The facts schema, bumped with any change to the rules above. */
-	static final int SCHEMA = 2;
+	static final int SCHEMA = 3;
 
 	static final Pattern UPPER = Pattern.compile("^[A-Z].*");
 
@@ -123,9 +163,15 @@ public final class LiveWidth {
 		/** Where the declaration is, for the declared-before rule (0 for a parameter or field). */
 		final int declLine, declCol;
 		final List<Node> refs = new ArrayList<>();
+		/** The distinct lines of the uses (a literal declaration is not one). */
+		final TreeSet<Integer> refLines = new TreeSet<>();
+		/** The distinct lines of the definitions that have a line, and of the writes into it. */
+		final TreeSet<Integer> defLines = new TreeSet<>(), mutLines = new TreeSet<>();
 		/** The variables its definitions are computed from (identity, in order met). */
 		final Set<Var> from = new LinkedHashSet<>();
 		int first = Integer.MAX_VALUE, last = -1, defs, steps, muts;
+		/** Declared with no initializer or a literal one: the range may start at the first use. */
+		boolean literal;
 
 		Var(int kind, String name, Node scope, Node at, int defs) {
 			this.kind = kind;
@@ -139,8 +185,21 @@ public final class LiveWidth {
 		void ref(Node n) {
 			int line = line(n);
 			refs.add(n);
+			refLines.add(line);
 			first = Math.min(first, line);
 			last = Math.max(last, line);
+		}
+
+		/** A literal initializer: the declaration is in the range (as any initializer was), not a use. */
+		void declare(int line) {
+			literal = true;
+			first = Math.min(first, line);
+			last = Math.max(last, line);
+		}
+
+		/** The first use, or the declaration when there is none. */
+		int useFirst() {
+			return refLines.isEmpty() ? first : refLines.first();
 		}
 
 		/**
@@ -163,12 +222,20 @@ public final class LiveWidth {
 		final List<int[]> loopRanges = new ArrayList<>();
 		final Map<Var, int[]> loopExtent = new IdentityHashMap<>();
 		final List<CallFacts> calls = new ArrayList<>();
+		Stmt tree;
 	}
 
 	static final class CallFacts {
 		int line;
 		Set<Var> args = new LinkedHashSet<>(), receiver = new LinkedHashSet<>();
 		Var result;
+	}
+
+	/** A node of the statement tree: a sequence (block, switch entry) or a statement. */
+	static final class Stmt {
+		int start, end, kind;
+		boolean seq;
+		final List<Stmt> kids = new ArrayList<>();
 	}
 
 	static final class FileFacts {
@@ -292,6 +359,7 @@ public final class LiveWidth {
 
 		List<Node> own = new ArrayList<>();
 		Measurer.ownNodes(body, own);
+		m.tree = tree(body);
 		m.lines.add(m.nameLine);
 		for (Node n : own) {
 			m.lines.add(line(n));
@@ -311,17 +379,27 @@ public final class LiveWidth {
 				boolean bound = vd.getInitializer().isPresent() || holder instanceof ForEachStmt;
 				Var v = new Var(LOCAL, vd.getNameAsString(), scope, vd.getName(), bound ? 1 : 0);
 				if (bound) {
+					v.defLines.add(line(vd.getName()));
+				}
+				if (holder instanceof ForEachStmt || (bound && !literal(vd.getInitializer().get()))) {
 					v.ref(vd.getName());
+				} else if (bound) {
+					v.declare(line(vd.getName())); // a literal: in the range, not a use
+				} else {
+					v.literal = true; // no value: not a reference at all, so the range starts at the first use
 				}
 				locals.add(v);
 				declared.put(vd, v);
 			} else if (n instanceof Parameter p) {
 				Node owner = p.getParentNode().orElse(null);
 				if (owner instanceof CatchClause || owner instanceof LambdaExpr) {
-					locals.add(new Var(LOCAL, p.getNameAsString(), owner, p.getName(), 1));
+					Var v = new Var(LOCAL, p.getNameAsString(), owner, p.getName(), 1);
+					v.defLines.add(line(p.getName()));
+					locals.add(v);
 				}
 			} else if (n instanceof TypePatternExpr tp) {
 				Var v = new Var(LOCAL, tp.getNameAsString(), patternScope(tp), tp.getName(), 1);
+				v.defLines.add(line(tp.getName()));
 				v.ref(tp.getName());
 				locals.add(v);
 				declared.put(tp, v);
@@ -377,6 +455,7 @@ public final class LiveWidth {
 					flowInto(rebound, value, refOf);
 				}
 				rebound.defs++;
+				rebound.defLines.add(line(n));
 				if (step || inUpdate) {
 					rebound.steps++;
 				}
@@ -388,6 +467,7 @@ public final class LiveWidth {
 				Var into = varOf(base, locals, fields);
 				if (into != null) {
 					into.muts++;
+					into.mutLines.add(line(n));
 					if (value != null) {
 						flowInto(into, value, refOf);
 					}
@@ -436,7 +516,7 @@ public final class LiveWidth {
 		}
 
 		for (Var v : locals) {
-			if (!v.refs.isEmpty()) {
+			if (v.last >= 0) { // referenced, or declared with a literal
 				m.vars.add(v);
 			}
 		}
@@ -451,7 +531,7 @@ public final class LiveWidth {
 			}
 		}
 		for (Var v : m.vars) {
-			int lo = v.first, hi = v.last;
+			int lo = v.first, hi = v.last, useLo = v.useFirst();
 			for (Node loop : loops) {
 				if (v.scope != null && within(loop, v.scope)) {
 					continue; // declared in the loop: a fresh variable each iteration
@@ -465,12 +545,94 @@ public final class LiveWidth {
 				}
 				if (inside) {
 					lo = Math.min(lo, line(loop));
+					useLo = Math.min(useLo, line(loop));
 					hi = Math.max(hi, loop.getEnd().map(p -> p.line).orElse(hi));
 				}
 			}
-			m.loopExtent.put(v, new int[] { lo, hi });
+			m.loopExtent.put(v, new int[] { lo, hi, useLo });
 		}
 		return m;
+	}
+
+	/** The statement tree under a node: its statements and switch entries, nested types left out. */
+	static Stmt tree(Node n) {
+		Stmt s = new Stmt();
+		s.start = line(n);
+		s.end = n.getEnd().map(p -> p.line).orElse(s.start);
+		s.seq = n instanceof BlockStmt || n instanceof SwitchEntry;
+		s.kind = kind(n);
+		kids(n, s.kids);
+		return s;
+	}
+
+	static int kind(Node n) {
+		if (n instanceof ReturnStmt) {
+			return 1;
+		} else if (n instanceof BreakStmt) {
+			return 2;
+		} else if (n instanceof ContinueStmt) {
+			return 3;
+		} else if (n instanceof ThrowStmt) {
+			return 4;
+		} else if (n instanceof YieldStmt) {
+			return 5;
+		} else if (n instanceof IfStmt) {
+			return 6;
+		} else if (n instanceof ForStmt || n instanceof ForEachStmt || n instanceof WhileStmt || n instanceof DoStmt) {
+			return 7;
+		} else if (n instanceof TryStmt) {
+			return 8;
+		} else if (n instanceof SwitchStmt) {
+			return 9;
+		} else if (n instanceof SynchronizedStmt) {
+			return 10;
+		} else if (n instanceof LabeledStmt) {
+			return 11;
+		} else if (n instanceof BlockStmt) {
+			return 12;
+		} else if (n instanceof SwitchEntry) {
+			return 13;
+		}
+		return 0;
+	}
+
+	static void kids(Node n, List<Stmt> out) {
+		for (Node c : n.getChildNodes()) {
+			if (Measurer.isNestedTypePart(n, c)) {
+				continue;
+			}
+			if (c instanceof Statement || c instanceof SwitchEntry) {
+				out.add(tree(c));
+			} else {
+				kids(c, out);
+			}
+		}
+	}
+
+	static void writeTree(Writer w, Stmt s) throws IOException {
+		w.write("[" + s.start + "," + s.end + "," + (s.seq ? 1 : 0) + "," + s.kind + ",[");
+		for (int i = 0; i < s.kids.size(); i++) {
+			w.write(i > 0 ? "," : "");
+			writeTree(w, s.kids.get(i));
+		}
+		w.write("]]");
+	}
+
+	/** A literal, or one under a unary sign, a cast or parentheses: a value from nowhere. */
+	static boolean literal(Expression e) {
+		if (e instanceof LiteralExpr) {
+			return true;
+		}
+		if (e instanceof UnaryExpr u) {
+			return literal(u.getExpression());
+		}
+		if (e instanceof CastExpr c) {
+			return literal(c.getExpression());
+		}
+		if (e instanceof EnclosedExpr p) {
+			return literal(p.getInner());
+		}
+		return false;
 	}
 
 	/** The variables referenced in an expression (nested type bodies excluded). */
@@ -587,6 +749,14 @@ public final class LiveWidth {
 	 * muts, [from: variable indices]]], "calls": [[line, [argument variable indices], [receiver
 	 * variable indices], result variable index or -1]]}]}]}.
 	 */
+	static String ints(Iterable<Integer> xs) {
+		StringBuilder b = new StringBuilder("[");
+		for (int x : xs) {
+			b.append(b.length() > 1 ? "," : "").append(x);
+		}
+		return b.append(']').toString();
+	}
+
 	static String indices(Set<Var> vs, Map<Var, Integer> index) {
 		StringBuilder b = new StringBuilder("[");
 		for (Var v : vs) {
@@ -642,7 +812,9 @@ public final class LiveWidth {
 						w.write(j > 0 ? ",[" : "[");
 						Measurer.str(w, v.name);
 						w.write("," + v.kind + "," + v.first + "," + v.last + "," + e[0] + "," + e[1] + "," + v.defs
-								+ "," + v.steps + "," + v.muts + "," + indices(v.from, index) + "]");
+								+ "," + v.steps + "," + v.muts + "," + indices(v.from, index) + "," + (v.literal ? 1 : 0)
+								+ "," + v.useFirst() + "," + e[2] + "," + ints(v.refLines) + "," + ints(v.defLines) + ","
+								+ ints(v.mutLines) + "]");
 					}
 					w.write("],\"calls\":[");
 					for (int j = 0; j < m.calls.size(); j++) {
@@ -651,7 +823,9 @@ public final class LiveWidth {
 						w.write((j > 0 ? ",[" : "[") + c.line + "," + indices(c.args, index) + ","
 								+ indices(c.receiver, index) + "," + (r == null ? -1 : r) + "]");
 					}
-					w.write("]}");
+					w.write("],\"tree\":");
+					writeTree(w, m.tree);
+					w.write("}");
 				}
 				w.write("]}");
 			}

@@ -42,6 +42,31 @@ The facts it records:
   - `loop`: also widened over every loop the variable is referenced in but declared outside.
     Such a variable is live on the back edge, so it is live over the whole loop. This is the
     cheap part of following control flow; branches are not followed.
+  - **The literal rule.** A local declared with no value, or with a literal one (`0`, `-1`,
+    `null`, `""`, `false`, a cast or parenthesised literal), depends on nothing above it: the
+    declaration could move down to the first use without changing the method. The habit of
+    declaring every variable at the top would otherwise make each live from the top. So such a
+    variable's range starts at its first use, as a parameter's does. An initializer still
+    counts as a definition. The facts keep both starts, so the earlier reading, in which a
+    literal initializer started the range at the declaration, is a variant (`decl`) beside the
+    headline. A declaration with no value was never a reference, so it is unchanged.
+- **Reference lines.** The distinct lines each variable is used at, a literal declaration
+  excluded. The range says what is carried over a line; the reference lines say what is touched
+  near it, for forms that read locality (a window of lines, or the runs a variable is used in)
+  rather than the span.
+- **Definition lines and write lines.** The distinct lines of each variable's definitions that
+  have a line (an initializer, a binding, an assignment, an increment; not a parameter's
+  argument or a field's prior state), and of the writes into its object. With the reference
+  lines, a read can be told from a write at any line.
+- **Statement tree.** The method body as nested line ranges: a sequence (a block, a switch
+  entry, a lambda's block body) holds its statements in order; a statement holds the sequences
+  and statements directly inside it (an if's arms, a loop's body, a try's block and catches).
+  Each node carries its kind: the jumps (return, break, continue, throw, yield), the structural
+  statements (if, loop, try, switch), blocks and switch entries, or other.
+  Extract Method moves a contiguous run of one sequence's statements, so the tree says where a
+  cut may fall, which the reference lines and data flow then price: the variables used inside
+  the run but defined before it are its parameters, those defined inside and used after are its
+  results, and Java allows one result. Nested type bodies are left out, as everywhere.
 - **Weight.**
   - `unit`: 1 for every variable.
   - `assign`: every definition (the value the variable enters with, plus each reassignment),
@@ -51,7 +76,9 @@ The facts it records:
     set once and a loop counter both weigh 1 (Sajaniemi's *fixed value* and *stepper*), while a
     gatherer or most-recent holder weighs more.
 - **Scope.** `locals` covers parameters and locals; `all` adds fields.
-- **Parameter start.** From the parameter's first use, or (`sig`) from the signature.
+- **Start.** `use`: a parameter from its first use, a literal-initialised local from its first
+  use (the headline). `decl`: a literal-initialised local from its declaration. `sig`: a
+  parameter from the signature.
 - **Aggregate.**
   - `max`: the live width.
   - `mean`: Dunsmore & Gannon's average.
@@ -98,7 +125,7 @@ From those facts:
 | `out_vars`, `max_fanout` | How many variables are passed to internal calls; the most internal calls one variable goes to |
 | `in_out`, `in_caught` | Of what comes in, how much flows on to an internal call, directly or through what is computed from it, and how much stops here |
 | `in_through` | Parameters and fields passed to an internal call unchanged: a pipe strand, data the method only threads on |
-| `bridging` | Variables live at two or more internal-call lines: state held across calls, so the method glues its callees together |
+| `bridging` | Variables live (the headline range) at two or more internal-call lines: state held across calls, so the method glues its callees together |
 | `lw_at_calls` | The headline width at the lines with an internal call: how much is held when control is handed off |
 
 The hypothesis behind `bridging` is what may explain the earlier finding:
@@ -189,6 +216,13 @@ Live width is that combination: lifetime and mutation together, read at the hard
   - A lambda's body flows into the variable it is assigned to.
   - Data written into an object through a call (`list.add(x)`) reaches the list only as that
     call's argument, not as a definition of `list`.
+
+## What follows it
+
+Step 13 found that the reviewers' Long Method is an absolute length (26 lines or more) and that
+no width form beats it. The direction that follows, the cost of bringing a method under that
+cap, with its logic, parameters and literature, is in [`SPLIT.md`](SPLIT.md). The reference
+lines, the literal rule and the statement tree were added to the facts for it.
 
 ## How it is read (step 13)
 
