@@ -23,7 +23,11 @@ one with the smallest worst seam wins, then the fewest pieces, then the smallest
 Every number is a Params field, with SPLIT.md's defaults.
 
     width(S) = max over pieces of (inputs + outputs)
-    cost(S)  = sum over pieces of (inputs + output_weight * outputs + piece_cost)
+    cost(S)  = sum over pieces of (inputs + output_cost(outputs) + piece_cost)
+
+where a piece returning nothing costs nothing for its outputs, one return costs output_weight
+(a plain method call), and two or more cost multi_output_weight per value returned (a record
+type to declare, pack and unpack), when max_outputs allows them at all.
 
 Known approximations (SPLIT.md, Facts needed): a reference after the run is taken as a read,
 so a variable merely overwritten later still counts as an output; calls to the class's own
@@ -54,17 +58,20 @@ class Params:
     min_piece: int = 5         # the smallest run worth extracting, in code lines
     min_saving: int = 3        # lines a cut must remove: the run's length less its call line
     max_inputs: int = 3        # parameters a piece may need; -1 for no limit
-    max_outputs: int = 1       # values a piece may return (Java: one)
-    output_weight: int = 2     # a return value against a parameter, in the cost
+    max_outputs: int = 1       # values a piece may return (Java: one); -1 for no limit (a record)
+    output_weight: int = 1     # a single return value, in the cost: a plain method call
+    multi_output_weight: int = 3   # per value returned when a piece returns two or more: a record
     piece_cost: int = 1        # a name and a call site, per piece
     trailing_return: bool = True   # a run may end in a return; any other return leaves it
     structural_only: bool = False  # pieces are whole if, loop, try and switch statements only
     lock_on_any_field: bool = False  # a field read locks a piece too (default: a write, or an own call)
+    side_fraction: float = 1 / 3   # the narrowest waist: each side of the cut holds at least this share of the lines
 
 
 DEFAULT = Params()
 STRUCTURAL = Params(structural_only=True)
 UNLIMITED = Params(max_inputs=-1)      # whether an infeasible method fails on inputs or on outputs
+RECORDS = Params(max_outputs=-1)       # several returns allowed, each costed as a record's value
 
 
 @dataclass(frozen=True)
@@ -82,11 +89,16 @@ class Seam:
     def width(self) -> int:
         return len(self.inputs) + len(self.outputs)
 
+    def output_cost(self, p: Params) -> int:
+        k = len(self.outputs)
+        return p.output_weight * k if k <= 1 else p.multi_output_weight * k
+
     def cost(self, p: Params) -> int:
-        return len(self.inputs) + p.output_weight * len(self.outputs) + p.piece_cost
+        return len(self.inputs) + self.output_cost(p) + p.piece_cost
 
     def feasible(self, p: Params) -> bool:
-        return len(self.outputs) <= p.max_outputs and (p.max_inputs < 0 or len(self.inputs) <= p.max_inputs)
+        return ((p.max_outputs < 0 or len(self.outputs) <= p.max_outputs)
+                and (p.max_inputs < 0 or len(self.inputs) <= p.max_inputs))
 
     def binding(self, p: Params) -> str:
         if self.fields_written or self.own_calls or (p.lock_on_any_field and self.fields_read):
@@ -401,6 +413,65 @@ def split(m: dict, own_call_lines=(), p: Params = DEFAULT, nloc: int | None = No
             r.free += 1
     r.remainder_locked = _remainder_locked(M, cuts, p)
     return r
+
+
+@dataclass
+class Waist:
+    """The narrowest waist of a method of any length (SPLIT.md): over every run that is a head
+    or a tail of one sequence of the statement tree, at any depth, and whose extraction leaves
+    both what goes and what stays at least `side_fraction` of the method's lines, the cheapest
+    seam. Defined without a trigger, a minimum piece or a feasibility rule, so it reads on every
+    method with two or more statements; the form the descriptive study of AI-written code uses,
+    where no reviewer oracle sets a cap."""
+    defined: bool
+    width: float = 0.0
+    cost: float = 0.0
+    side: str = ""          # "head" or "tail" of its sequence: the run extracted at the narrowest cut
+    lo: int = 0
+    hi: int = 0
+    binding: str = ""
+    inputs: int = 0
+    outputs: int = 0
+    depth: int = 0          # 0: a run of the body's own statements
+    candidates: int = 0     # runs that left both sides big enough
+
+
+def _sequences(node: list, depth: int = 0):
+    if node[lw.S_SEQ] and node[lw.S_KIDS]:
+        yield depth, node[lw.S_KIDS]
+    for c in node[lw.S_KIDS]:
+        yield from _sequences(c, depth + (1 if node[lw.S_SEQ] else 0))
+
+
+def waist(m: dict, own_call_lines=(), p: Params = DEFAULT) -> Waist:
+    M = Method(m, own_call_lines)
+    total = len(M.code)
+    need = p.side_fraction * total
+    best, n = None, 0
+    for depth, kids in _sequences(M.tree):
+        for k in range(1, len(kids) + 1):
+            for side, run in (("head", kids[:k]), ("tail", kids[len(kids) - k:])):
+                lo, hi = run[0][lw.S_START], run[-1][lw.S_END]
+                goes = M.lines(lo, hi)
+                if goes < need or total - goes < need:
+                    continue
+                n += 1
+                if not jumps_ok(run, p):
+                    continue
+                s = M.seam(lo, hi)
+                key = (s.width, s.cost(p), depth, -goes)
+                if best is None or key < best[0]:
+                    best = (key, side, s, depth)
+    if best is None:
+        return Waist(False, candidates=n)
+    (w, c, _, _), side, s, depth = best
+    return Waist(True, float(w), float(c), side, s.lo, s.hi, s.binding(p), len(s.inputs), len(s.outputs), depth, n)
+
+
+def binding(m: dict, own_call_lines=(), p: Params = DEFAULT) -> str:
+    """The whole method's binding to its class, read as a seam over its body."""
+    M = Method(m, own_call_lines)
+    return M.seam(M.tree[lw.S_START], M.tree[lw.S_END]).binding(p)
 
 
 def _remainder_locked(M: Method, cuts: list, p: Params) -> bool:

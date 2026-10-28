@@ -50,7 +50,8 @@ def test_a_sequential_method_splits_with_a_narrow_seam():
     assert all(hi - lo + 1 <= 25 for lo, hi, *_ in r.cuts)
     # each piece hands one value on; the first piece starts the chain, so it takes nothing in
     assert [(ins, outs) for _, _, ins, outs, _ in r.cuts] == [(0, 1), (1, 1)]
-    assert r.cost == (0 + 2 + 1) + (1 + 2 + 1)
+    # one return costs one, a plain method call, as an input does; the one per piece is the call
+    assert r.cost == (0 + 1 + 1) + (1 + 1 + 1)
 
 
 def test_an_interwoven_method_has_a_wide_seam_everywhere_and_fails_the_input_limit():
@@ -73,6 +74,12 @@ def test_two_results_cannot_be_returned():
     assert r.applicable and not r.feasible
     M = sp.Method(method(body, vars_))
     assert M.seam(10, 30).outputs == ("a", "b")
+    # ... unless a record may carry them: then each value returned costs three, against one
+    # for a single return and nothing for none
+    assert M.seam(10, 30).cost(sp.RECORDS) == 2 + 3 * 2 + 1
+    assert M.seam(10, 30).cost(sp.DEFAULT) == M.seam(10, 30).cost(sp.RECORDS)   # the cost is the cost
+    r = sp.split(method(body, vars_), p=sp.RECORDS)
+    assert r.feasible and r.width >= 2 and any(outs == 2 for _, _, _, outs, _ in r.cuts)
 
 
 def test_the_seam_roles_input_output_internal_and_the_loop_back_edge():
@@ -88,7 +95,8 @@ def test_the_seam_roles_input_output_internal_and_the_loop_back_edge():
     assert s.outputs == ("y", "acc")            # y read after; acc read at 12, the back edge
     assert s.moved == ()
     assert s.width == 5
-    assert s.cost(sp.DEFAULT) == 3 + 2 * 2 + 1
+    assert s.cost(sp.DEFAULT) == 3 + 3 * 2 + 1       # two outputs: a record's values, three each
+    assert M.seam(26, 30).width == 0 and M.seam(26, 30).cost(sp.DEFAULT) == 1   # nothing crosses: the call
 
 
 def test_a_literal_declaration_before_the_run_is_moved_not_passed():
@@ -176,3 +184,25 @@ def test_the_remainder_binding_reads_what_stays():
     inside = any(lo <= 2 <= hi for lo, hi, *_ in r.cuts)
     assert r.remainder_locked == (not inside)
     assert r.locked + r.bound + r.free == r.pieces
+
+
+def test_the_narrowest_waist_reads_on_any_method():
+    body = seq(1, 62, *[stmt(i) for i in range(2, 62)])
+    w = sp.waist(method(body, chain(60)))
+    assert w.defined and w.width == 1 and w.candidates > 0     # one value crosses any cut of the chain
+    vars_ = [V(f"v{k}", lw.LOCAL, refs=list(range(2, 62)), defs=[2]) for k in range(5)]
+    assert sp.waist(method(body, vars_)).width == 5             # five values cross every cut
+    short = seq(1, 8, *[stmt(i) for i in range(2, 8)])
+    w = sp.waist(method(short, chain(6)))
+    assert w.defined and w.width == 1                           # no trigger: a 7-line method has a waist
+    one = seq(1, 30, stmt(2, 29, lw.K_IF, seq(2, 29, *[stmt(i) for i in range(3, 29)])))
+    w = sp.waist(method(one, chain(26, start=3)))
+    assert w.defined and w.depth == 1 and w.width == 1            # one statement: the cut falls inside it
+    single = seq(1, 30, stmt(2, 29, lw.K_IF, seq(2, 29, stmt(3, 28))))
+    assert not sp.waist(method(single, chain(26, start=3))).defined   # nothing to cut between
+    assert not sp.waist(method(body, chain(60)), p=sp.Params(side_fraction=0.9)).defined
+    # a return in the middle of the head keeps the head from being extracted; the tail still can
+    body = seq(1, 62, *[stmt(i) for i in range(2, 20)], stmt(20, kind=lw.K_RETURN), *[stmt(i) for i in range(21, 62)])
+    w = sp.waist(method(body, chain(60)))
+    assert w.defined and w.side == "tail"
+    assert sp.binding(method(body, chain(60))) == "free"

@@ -74,6 +74,9 @@ available.
   beside what the slicing tools would propose;
 - **infeasible**: no segmentation reaches the cap (two outputs at every seam; a statement no
   inner cut can shrink), the methods that need more than Extract Method;
+- **records variant**: the same search with several returns allowed and costed as a record's
+  values (below). A method infeasible by default and feasible here is splittable only by
+  introducing a type, and its cost says what that takes;
 - **structural variant**: the same search restricted to runs that are whole `if`, `try` and loop
   statements, which is where developers cut (Alon and Feitelson, below). The gap between the two
   costs is how much the data-flow seam adds over the structural cue.
@@ -90,7 +93,7 @@ it. Every component comes from the facts.
 | Component | Computed from | Why it costs |
 |---|---|---|
 | Parameters | the inputs: used inside, referenced before | a signature slot, an argument at the call, and a name a reader carries across |
-| Return value | the outputs: written inside, used after | fixes the return type; the remainder needs the assignment, often a fresh declaration |
+| Return value | the outputs: written inside, used after | none: a void piece is a plain call; one: a plain call with a result, the same as a parameter; two or more: infeasible by default, or three per value under the records variant, since Java has no tuple and each extra value needs a record type declared, packed in the piece and unpacked at the call |
 | Moved declarations | variables with every reference inside, declared before with no value or a literal one | nothing: the declaration is not a computation, so the tool places it at the top of the new method; the literal rule already said it could move without changing the method |
 | Trailing return | a run ending in `return` | the piece returns and the caller returns its result: cheap, but two signatures change |
 | Checked exceptions | calls inside that throw checked types | the new method needs a `throws` clause; not in the facts, so a flag at most, and better left to the IDE |
@@ -156,12 +159,27 @@ which the cap is met.
 **A formula to start from.** For a segmentation S with pieces p:
 
 ```
-cost(S)  = sum over p of ( inputs_p + 2 * outputs_p + 1 )  + penalty * [infeasible]
+cost(S)  = sum over p of ( inputs_p + output_cost(outputs_p) + 1 )  + penalty * [infeasible]
 width(S) = max over p of ( inputs_p + outputs_p )
+
+output_cost(0) = 0        a void piece: a plain call
+output_cost(1) = 1        one result: a plain call with a value, the same as a parameter
+output_cost(k) = 3 * k    two or more: a record, when allowed at all (infeasible by default)
 ```
 
-The output weight of two says a return is dearer than a parameter; the one per piece is the
-name and the call. All of these are parameters (next section), to be fitted, not asserted.
+A method call that takes some values and returns one is just a method; its interface costs
+one per value crossing, in either direction, and the one per piece is the name and the call
+site. Several returns are not what a method is for, and Java makes that concrete: there is no
+tuple in the JDK, `java.lang.Record` cannot be used as a generic return type for two values,
+and the only honest route is a named record, local to the enclosing method (Java 16) or
+nested in the class. Each value then costs three things: the type declared, with a name the
+developer must invent; the packing, a constructor call in the piece's return; and the
+unpacking, one accessor read per value at the call site, since Java has no destructuring
+assignment (record patterns, Java 21, destructure only in `instanceof` and `switch`). Hence
+three per value returned, applied to every value once there are two, so a two-value seam
+costs six against one for a single return. By default such a seam is infeasible; the records
+variant allows it at that price, and the methods that become feasible only there are a count
+of their own. All of these are parameters (next section), to be fitted, not asserted.
 
 ## Parameters
 
@@ -177,8 +195,9 @@ read, the defaults the headline, the rest reported in full.
 | Minimum saving a cut must make | 3 lines | avoids cuts that only shuffle a call |
 | What a line is | code lines, as the oracle counts | tokens or statements as alternatives |
 | Maximum inputs | 3 | Haas and Hummel's prune; Fowler's long parameter list at 4 |
-| Maximum outputs | 1 | Java's single return; 0 for a pure helper; 2+ if a record or holder is allowed |
-| Weight of an output against an input | 1 in the seam; 2 in the refactor cost | an output fixes the return type, so dearer to make; in the seam both are one thing to hold |
+| Maximum outputs | 1 | Java's single return; 0 for a pure helper; no limit under the records variant |
+| Cost of a single return | 1 | the same as a parameter: a call with a result is a plain method call; 0 for a void piece |
+| Cost per value of several returns | 3 each | a record type declared, packed and unpacked; only when the maximum outputs allows them |
 | Moved literal declarations | 0 | not a computation: the tool places them in the new method; a parameter only if left behind |
 | Cost per piece | 1 | a name and a call site |
 | Infeasible penalty | reported, not summed | the methods that need more than Extract Method are a count of their own |
@@ -245,9 +264,9 @@ only**, since a method under the trigger has no split and the only ground a spli
 over length is among the methods length already flags. On the confirm half that ground is 28
 false positives against 103 hits: perfect separation would take length's 0.777 to about 0.90.
 Class level reads the locked share and the sums of cost and interface against the step 13
-class competitors. The defaults are the headline; the structural-only and no-input-limit
-variants are read beside them; nothing else of the grid is tried, and the parameters are
-written into the output.
+class competitors. The defaults are the headline; the structural-only, no-input-limit and
+records variants are read beside them (the last with its cost, since what a record costs is
+its point); nothing else of the grid is tried, and the parameters are written into the output.
 
 The search's approximations, beyond the own-class call above: the facts give a method's lines
 as the statement tree's spans, which agree with the measurer's nloc for most methods and within

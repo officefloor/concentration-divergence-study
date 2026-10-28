@@ -10,7 +10,7 @@
 # variables' reference, definition and write lines, the loops, the calls and the statement tree)
 # and, for every method at or over the 26-line trigger, finds the cheapest segmentation into
 # pieces of at most 25 lines (scripts/split.py): its worst seam, its cost, its binding to the
-# class, and the structural-only and no-input-limit variants. scripts/exploratory_split.py then
+# class, and the structural-only, no-input-limit and records variants. scripts/exploratory_split.py then
 # reads every form against the oracles as step 13 did (the registered rule; absolute cutoffs
 # chosen on the explore half and read on the confirm half; and, among the long methods only,
 # the AUC against the label), and the locked share at class level. No fetching: a reader over

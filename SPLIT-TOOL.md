@@ -6,14 +6,19 @@
 
 ## Two signals
 
-The split says two different things about a long method, and the tool surfaces them
+The split says three different things about a long method, and the tool surfaces them
 differently:
 
 - **Getting big, and splittable.** The method is near or over the cap and has a feasible split
   with a cheap seam. The warning carries the fix: the pieces, their inputs and outputs, the
   lines saved. A nudge that can be acted on in minutes.
+- **Splittable only with a type.** No segmentation gets by with one return, but one does if a
+  piece may return a record. The proposal carries the record: its fields are the values that
+  cross, and the cost (three per value, `SPLIT.md`) says what the developer takes on for the
+  type, the packing and the unpacking. The choice is theirs: the record, or a different cut by
+  hand, or leaving the method as it is.
 - **Big, and not splittable.** The method is over the cap and either no segmentation is
-  feasible, or every piece is locked to the class. There is no fix to attach, and that is the
+  feasible even with a record, or every piece is locked to the class. There is no fix to attach, and that is the
   point. Adding to this method grows something that cannot be taken apart afterwards; when the
   class's locked share is high, it is the class that is the problem. The notice says so in
   words: *this method is bound to the object's state; the next change here is a design
@@ -86,10 +91,12 @@ it and re-solves the rest, since the cheapest segmentation without that piece ma
 Pieces are applied one at a time, each through the IDE's refactoring, so every step is
 verified and undoable on its own.
 
-When no feasible segmentation exists the action says so, and why: *every cut carries two
-results*, or *the loop at 52-88 cannot be shortened without a second output*. Those are the
-methods that need more than Extract Method (a parameter object, a class), and naming the
-reason is more useful than a silent absence.
+When no segmentation gets by with one return the action says so, and why: *every cut carries
+two results*, or *the loop at 52-88 cannot be shortened without a second output*. If a record
+would do it, the proposal is shown with the record's fields and its cost, and the developer
+names the type as they name the piece. If not even that works, those are the methods that
+need more than Extract Method (a parameter object, a class), and naming the reason is more
+useful than a silent absence.
 
 ## How it decides
 

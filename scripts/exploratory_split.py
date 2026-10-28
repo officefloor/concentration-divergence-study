@@ -7,8 +7,8 @@ or more, MCC 0.777 on the confirm half) that no width, count or flow form beats.
 what follows (SPLIT.md): for every method at or over that trigger, the cheapest segmentation
 into pieces of at most the target length (scripts/split.py over the live-width facts of
 scripts/livewidth.py, schema 3), and whether its worst seam, its cost, its binding to the
-class, or the structural-only variant separates the long methods the reviewers passed from the
-ones they flagged. A method under the trigger has no split, so every split form is zero there:
+class, or the structural-only, no-input-limit and records variants separate the long methods
+the reviewers passed from the ones they flagged. A method under the trigger has no split, so every split form is zero there:
 "split width >= k" is length's cutoff with the seam added to it, and the question is whether k
 raises precision without losing more recall than it is worth.
 
@@ -37,8 +37,8 @@ Writes results/exploratory/split.<utc>.json (with its sha256) and prints the tab
 results/exploratory/split-units.<utc>.csv.gz: one row per method in a human oracle's universe
 with its label, its length, every split reading, and the cuts of its best segmentation. The
 parameters (scripts/split.py, Params) are recorded in the output; the defaults are the headline,
-the structural-only and no-input-limit variants are read beside them, and nothing else of the
-grid in SPLIT.md is tried here.
+the structural-only, no-input-limit and records variants (several returns allowed, costed as a
+record's values) are read beside them, and nothing else of the grid in SPLIT.md is tried here.
 """
 from __future__ import annotations
 
@@ -73,7 +73,8 @@ SEAM_K = (1, 2, 3, 4, 5, 6, 8)
 COST_K = (2, 3, 4, 6, 8, 10, 15, 20)
 COUNT_K = (1, 2, 3, 4, 6)
 SHARE_K = (0.5, 0.75, 0.9, 1.0)
-VARIANTS = {"": sp.DEFAULT, " [structural]": sp.STRUCTURAL, " [no input limit]": sp.UNLIMITED}
+VARIANTS = {"": sp.DEFAULT, " [structural]": sp.STRUCTURAL, " [no input limit]": sp.UNLIMITED,
+            " [records]": sp.RECORDS}
 # the forms read within the long methods, by AUC against the label
 WITHIN = ("split width", "split cost", "split interface", "split pieces", "split locked share",
           "split width [structural]", "split width [no input limit]", "nloc", "tokens", "cc", "cognitive")
@@ -101,7 +102,8 @@ def method_splits(facts: dict, rec: dict, ml: units.Level) -> tuple[dict, dict, 
     names = ["split width", "split cost", "split interface", "split pieces", "split infeasible",
              "split locked pieces", "split locked share", "split remainder locked",
              "split width [structural]", "split infeasible [structural]",
-             "split width [no input limit]", "split infeasible [no input limit]"]
+             "split width [no input limit]", "split infeasible [no input limit]",
+             "split width [records]", "split infeasible [records]", "split cost [records]"]
     out = {n: np.zeros(ml.n) for n in names}
     results, missing, misaligned = {}, 0, 0
     for i, uid in enumerate(ml.ids):
@@ -130,6 +132,8 @@ def method_splits(facts: dict, rec: dict, ml: units.Level) -> tuple[dict, dict, 
             v = sp.split(m, own, p, nloc)
             out[f"split width{suffix}"][i] = v.width
             out[f"split infeasible{suffix}"][i] = 0.0 if v.feasible else 1.0
+            if suffix == " [records]":
+                out["split cost [records]"][i] = v.cost      # the point of that variant: what the records cost
     return out, results, missing, misaligned
 
 
