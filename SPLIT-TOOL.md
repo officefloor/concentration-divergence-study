@@ -16,7 +16,9 @@ differently:
   piece may return a record. The proposal carries the record: its fields are the values that
   cross, and the cost (three per value, `SPLIT.md`) says what the developer takes on for the
   type, the packing and the unpacking. The choice is theirs: the record, or a different cut by
-  hand, or leaving the method as it is.
+  hand, or leaving the method as it is. Under function injection (`SPLIT.md`, *The framework
+  reading*) this signal does not arise: the values would be declared, not packed, so the tool
+  must know which reading the code earns before it says a type is needed.
 - **Big, and not splittable.** The method is over the cap and either no segmentation is
   feasible even with a record, or every piece is locked to the class. There is no fix to attach, and that is the
   point. Adding to this method grows something that cannot be taken apart afterwards; when the
@@ -75,6 +77,11 @@ used only inside it. The tool moves those declarations to the top of the new met
 of the proposal; they cost nothing and cross no seam. Left in place, the IDE would pass them
 as parameters, so the move happens before the IDE's extraction is invoked.
 
+*in* lists what the piece must be handed. A parameter of the method that the piece uses as it
+arrived is shown as *passed: request, config* rather than counted, so the developer sees which
+inputs are the method's own parameters going through and which are values computed before the
+cut; under the framework reading below the passed ones cost nothing.
+
 The last column is the piece's binding (`SPLIT.md`, *Binding to the class*): *static* for a
 piece that touches no field and calls none of the class's own methods, so it can be a
 stateless utility and moved anywhere; *instance* with the reason for one that cannot, a field
@@ -98,6 +105,32 @@ names the type as they name the piece. If not even that works, those are the met
 need more than Extract Method (a parameter object, a class), and naming the reason is more
 useful than a silent absence.
 
+### Under function injection
+
+Where the method is a function a framework calls and supplies (an OfficeFloor section, or any
+container that injects a function's declared parameters), the pieces are not methods the
+remainder calls but further functions the framework calls in sequence, and the tool reads the
+method under `SPLIT.md`'s framework variant: a parameter handed on unchanged is free, since the
+piece declares it and the framework injects it, and a second result is one more declared value
+rather than a record. The reading is chosen per class from how the framework marks its
+functions (the section annotation, the function registration), never guessed from the body,
+and the summary line says which reading is in force. The proposal changes shape with it:
+
+```
+function 48-71   24 lines   declares: request, config   produces: session   static   saves 23
+function 73-90   18 lines   declares: session           produces: -         static   saves 17
+remainder        19 lines   declares: request, config, session               was 61
+```
+
+*declares* is what the new function asks the framework for, the method's own parameters
+passed through and the values earlier pieces produced; *produces* is what it hands on. A value
+that both declares and produces is a variable between two functions, and the tool names it
+once, in the order the functions run. What the IDE's Extract Method would produce here, an
+instance method with a call site and a return, is the wrong edit, so this surface is a
+diagnostic with the declarations written out, applied by hand or by a framework-aware
+refactoring that does not yet exist; the ordering of the functions is the one the remainder
+had, and it is part of the proposal.
+
 ## How it decides
 
 The algorithm is [`SPLIT.md`](SPLIT.md)'s, run for one method on demand:
@@ -107,8 +140,10 @@ The algorithm is [`SPLIT.md`](SPLIT.md)'s, run for one method on demand:
    literal rule, and the data flow. In an IDE the parse is the editor's own syntax tree, and the
    same facts come from it.
 2. **Candidates.** Every contiguous run of one sequence's statements, with its line count, its
-   inputs and outputs, the literal declarations it takes with it, and the jump rule. Runs that
-   fail feasibility are kept, with the reason, for the explanation above.
+   inputs and outputs, the parameters it passes through, the literal declarations it takes with
+   it, and the jump rule. Under the framework reading the passed parameters leave the inputs and
+   the output cap is lifted. Runs that fail feasibility are kept, with the reason, for the
+   explanation above.
 3. **Search.** The bottom-up dynamic program: cheapest worst seam such that the remainder and
    every piece end under the target, recursing into statements longer than the cap. The
    structural-only variant (whole `if`, `try` and loop statements) is solved too, and preferred
@@ -123,7 +158,8 @@ The algorithm is [`SPLIT.md`](SPLIT.md)'s, run for one method on demand:
 
 Everything numeric is a setting, with `SPLIT.md`'s defaults: the trigger and target lengths,
 the minimum piece, the maximum inputs, the single output, the weights, structural-only or any
-run, and whether a trailing return is allowed.
+run, whether a trailing return is allowed, and the reading, method or framework, which is set
+per class rather than per project.
 
 ## What the IDE must still check
 
@@ -178,6 +214,11 @@ The core is one pure module, facts in and segmentation out, shared by all four, 
 - **Does a split lower the width a reader holds?** Replaying the segmentation over the facts
   gives width before and after; the claim is that the remainder's width falls to about its
   total interface. If it does not, the split moved the problem rather than reducing it.
+- **Does the framework reading cost what a developer does?** It says a pass-through parameter
+  is free and a second result costs one. Whether developers splitting injected functions
+  accept the cheaper cuts it proposes, and whether the values it names as variables between
+  functions are the ones they would declare, is the same acceptance question asked on that
+  code, and nothing has been measured on it beyond the descriptive counts in `SPLIT.md`.
 - **What changes for AI-written code?** The same tool, the same defaults, over a corpus of
   AI-generated methods: whether more of them are infeasible under one output, and whether the
   pieces proposed carry more interface at the same length. That is the descriptive study
