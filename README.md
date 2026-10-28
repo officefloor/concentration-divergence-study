@@ -42,6 +42,7 @@ step per post hoc analysis, in the order it was done. None of it is confirmatory
 ./step11_explore_log_matrix.sh # the registered matrix on a log scale (scripts/exploratory_log_matrix.py)
 ./step12_explore_reviewers.sh  # MLCQ's individual reviews (scripts/exploratory_reviewers.py)
 ./step13_explore_livewidth.sh  # live width (LIVEWIDTH.md): re-fetches every repository, then scores
+./step14_explore_split.sh      # split cost (SPLIT.md): reads step 13's facts, no fetching
 ```
 
 Needs python3 (3.10+), git, Java 17+, Maven 3 and, for step 3, the GitHub CLI authenticated.
