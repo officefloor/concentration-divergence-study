@@ -4,6 +4,38 @@
 > nothing in the study depends on it. It records how the split cost of [`SPLIT.md`](SPLIT.md)
 > would be turned into a refactoring tool, so the design is not lost while the study runs.
 
+## Two signals
+
+The split says two different things about a long method, and the tool surfaces them
+differently:
+
+- **Getting big, and splittable.** The method is near or over the cap and has a feasible split
+  with a cheap seam. The warning carries the fix: the pieces, their inputs and outputs, the
+  lines saved. A nudge that can be acted on in minutes.
+- **Big, and not splittable.** The method is over the cap and either no segmentation is
+  feasible, or every piece is locked to the class. There is no fix to attach, and that is the
+  point. Adding to this method grows something that cannot be taken apart afterwards; when the
+  class's locked share is high, it is the class that is the problem. The notice says so in
+  words: *this method is bound to the object's state; the next change here is a design
+  decision, not an edit*. A sinew that cannot be cut is what a god method is.
+
+## Three surfaces
+
+| Surface | Scope | What it does |
+|---|---|---|
+| IDE | the method under the cursor | the facts on the fly, the proposal with names to fill in, and the not-splittable notice while the developer is still inside the method |
+| Git hook | the methods the diff touches | the pass on changed files only; a warning on a touched method that is over the cap or has grown, with the proposal in the hook's output; never a word about a method the change did not touch |
+| Pipeline gate | the whole repository | the ratchet: fail only on growth, a method that crossed the cap in this change or was over it and got longer; report the class-level locked share as a trend, never as a gate |
+
+The ratchet is what makes a gate survivable on a codebase that already has long methods:
+nothing that was long before fails the build, only making it longer does. It is the rule the
+"new code" quality gates use, and the right one here. All three surfaces share the one pure
+module below; the pass has no symbol solver, which is why it is fast enough for a hook.
+
+Before any surface gates anything, step 14 has to show the measure separates something, the
+own-class call reading (an upper bound on *locked* until the measurer records static calls)
+should be tightened, and the scope is Java through the measurer.
+
 ## What it does
 
 Every IDE can extract a method from a region the developer selects: it computes the parameters
