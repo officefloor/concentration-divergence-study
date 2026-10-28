@@ -79,7 +79,12 @@ available.
   introducing a type, and its cost says what that takes;
 - **structural variant**: the same search restricted to runs that are whole `if`, `try` and loop
   statements, which is where developers cut (Alon and Feitelson, below). The gap between the two
-  costs is how much the data-flow seam adds over the structural cue.
+  costs is how much the data-flow seam adds over the structural cue;
+- **framework variant**: the same search read as if the pieces were functions a framework
+  calls in sequence rather than methods the remainder calls (below, *The framework reading*).
+  A parameter handed on unchanged costs nothing, and a second result is one more declared
+  value, not a record. It is not part of step 14; it is read on the agent-written corpora,
+  where one arm is written that way.
 
 ## The cost of the refactor
 
@@ -181,6 +186,42 @@ costs six against one for a single return. By default such a seam is infeasible;
 variant allows it at that price, and the methods that become feasible only there are a count
 of their own. All of these are parameters (next section), to be fitted, not asserted.
 
+### The framework reading
+
+The cost above assumes the pieces are methods the remainder calls: a piece's inputs are its
+parameters, its results come back through one return, and the remainder sequences the calls.
+Under function injection (OfficeFloor's functions, and any style where a container calls each
+function and supplies what it declares) the pieces are not called by the remainder at all. The
+framework calls them one after another, and each declares what it needs. Two things change at
+the seam.
+
+- **A parameter handed on unchanged is free.** If the long method takes `request`, `repository`
+  and `config` and a piece uses them as they arrived, the piece declares the same three
+  parameters and the framework injects them. No argument is written, no call site exists, and
+  the names already stood on the method. In the facts such a value is a parameter of the method
+  with no definition and no mutation before the run; the seam records it as *passed* and, under
+  this reading, leaves it out of the inputs. A parameter the method reassigned or mutated before
+  the run is a computed value like any local and still counts.
+- **Several results are several declared values, not a record.** A value one piece computes
+  for a later one is declared as an output on the one side and an input on the other, one
+  declaration per value, and the framework carries it. There is no type to invent, no packing
+  and no unpacking, so the second and later results cost one each, the same as a single return,
+  and no seam is infeasible on its outputs. A computed value still crosses, and its declaration
+  on both sides is a name a reader carries across, so it costs one as an input does.
+
+What does not change: computed locals are still inputs, the maximum inputs still applies to
+them, a jump that leaves a run is still fatal, and the binding to the class is read as before.
+This reading does not apply to a Spring handler, and the search makes no attempt to: the
+analogue of an injected parameter there is an injected field, which the seam already treats
+as free (fields are not interface), and which appears instead in the binding, since a piece
+that reads or writes the controller's fields stays in the controller. That is the comparison
+the reading sets up. Under default parameters both arms are costed as if their pieces were
+instance methods; under the framework reading the OfficeFloor arm is costed as what its pieces
+would be, and the difference between the two readings on that arm is what the framework buys
+on the seam: on the OfficeHQ chains (October 2026) it took the infeasible share of the long
+functions from about half to about a seventh, the remaining infeasible ones threading four to
+eight computed locals through a run, which no reading of the parameters removes.
+
 ## Parameters
 
 Every number the algorithm decides by should be named, defaulted and sourced, so a fit on one
@@ -195,9 +236,10 @@ read, the defaults the headline, the rest reported in full.
 | Minimum saving a cut must make | 3 lines | avoids cuts that only shuffle a call |
 | What a line is | code lines, as the oracle counts | tokens or statements as alternatives |
 | Maximum inputs | 3 | Haas and Hummel's prune; Fowler's long parameter list at 4 |
-| Maximum outputs | 1 | Java's single return; 0 for a pure helper; no limit under the records variant |
+| Maximum outputs | 1 | Java's single return; 0 for a pure helper; no limit under the records and framework variants |
 | Cost of a single return | 1 | the same as a parameter: a call with a result is a plain method call; 0 for a void piece |
-| Cost per value of several returns | 3 each | a record type declared, packed and unpacked; only when the maximum outputs allows them |
+| Cost per value of several returns | 3 each | a record type declared, packed and unpacked; only when the maximum outputs allows them; 1 each under the framework variant, where each result is a declared value the framework carries |
+| Pass-through parameters | inputs, one each | a parameter of the method handed on unchanged; free under the framework variant, since the piece declares it and the framework injects it |
 | Moved literal declarations | 0 | not a computation: the tool places them in the new method; a parameter only if left behind |
 | Cost per piece | 1 | a name and a call site |
 | Infeasible penalty | reported, not summed | the methods that need more than Extract Method are a count of their own |
@@ -267,6 +309,10 @@ Class level reads the locked share and the sums of cost and interface against th
 class competitors. The defaults are the headline; the structural-only, no-input-limit and
 records variants are read beside them (the last with its cost, since what a record costs is
 its point); nothing else of the grid is tried, and the parameters are written into the output.
+The framework variant is not read in step 14, since nothing in the human corpora is written
+that way; [`scripts/exploratory_petclinic.py`](scripts/exploratory_petclinic.py) reads it
+beside the default and records variants on the agent-written corpora, arm by arm, and reports
+each arm under the reading its architecture earns.
 
 The search's approximations, beyond the own-class call above: the facts give a method's lines
 as the statement tree's spans, which agree with the measurer's nloc for most methods and within
