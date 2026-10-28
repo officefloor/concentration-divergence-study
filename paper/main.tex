@@ -549,11 +549,21 @@ method into pieces and count what crosses each seam, the parameters a piece
 must be handed and the value it must return, with a second return value
 costing a record type. That is the sinew of the refactoring rather than of
 the method, and it is the measure a tool would use, since length is the
-trigger and the split is the proposal. Prior tools rank extract-method
-candidates within a method \cite{tsantalis2011, haas2016}; none takes the
-length cap as a constraint with a cost on what the pieces exchange, and
-that instrument is to be built and read descriptively, on human-written and
-on agent-written code, before any claim is registered for it.
+trigger and the split is the proposal. The cost is also the first place the
+construct meets architecture. What a seam costs depends on who calls the
+pieces: when the remainder calls them, every value that crosses is a
+parameter or the one return; when a framework calls them in sequence and
+supplies what each declares, a parameter handed on unchanged costs nothing
+and a second result is a declared variable rather than a type. The same
+long method therefore has a cost under each reading, and the difference is
+what the architecture buys on the seam, which is the comparison to make
+between agent-written arms of the same system under different frameworks.
+Prior tools rank extract-method candidates within a method
+\cite{tsantalis2011, haas2016}; none takes the length cap as a constraint
+with a cost on what the pieces exchange, and none costs the same cut under
+more than one calling convention. That instrument is built and is to be
+read descriptively, on human-written and on agent-written code, before any
+claim is registered for it.
 
 \section{Threats to validity}
 \label{sec:threats}

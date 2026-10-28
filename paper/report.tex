@@ -1361,10 +1361,17 @@ the plan stated and this data cannot test. The construct's next form at
 method level is not a detector but a cost: with the trigger fixed at the
 constant, the data that crosses the seam when a long method is cut into
 pieces under it, the sinew of the refactoring rather than of the method.
-Prior tools rank extract-method candidates within a method
+What a seam costs depends on who calls the pieces: when the remainder calls
+them, every value that crosses is a parameter or the one return; when a
+framework calls them in sequence and supplies what each declares, a
+parameter handed on unchanged costs nothing and a second result is a
+declared variable rather than a type, so the same long method has a cost
+under each reading and the difference is what the architecture buys on the
+seam. Prior tools rank extract-method candidates within a method
 \cite{tsantalis2011, haas2016}; none takes the length cap as a constraint
-with a cost on what the pieces exchange, and that instrument is to be built
-and read descriptively before any claim is registered for it.
+with a cost on what the pieces exchange, and none costs the same cut under
+more than one calling convention. That instrument is built and is to be
+read descriptively before any claim is registered for it.
 Both hypotheses are post hoc and were found by searching; the power
 estimate from this study's intervals says the class-level claim needs
 either several times the labelled repositories or a better measure.
