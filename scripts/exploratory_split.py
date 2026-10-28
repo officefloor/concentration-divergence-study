@@ -224,7 +224,7 @@ def score_set(set_name: str, facts_dir: str) -> tuple[dict, dict, list]:
         long_mask = ml.values["nloc"] >= sp.DEFAULT.trigger
         cover["long_units"] += int(long_mask.sum())
         by = lw.by_unit(lwrec["facts"])
-        has = np.array([units._uid_parts(u) in by for u in ml.ids])
+        has = np.array([units._uid_parts(u) in by for u in ml.ids], dtype=bool)
         cover["long_without_facts"] += int((long_mask & ~has).sum())
         forms = {"method": method_forms(ml, mc, w), "class": class_forms(cl, ml, mc, w, res)}
         levels = {"method": ml, "class": cl}
