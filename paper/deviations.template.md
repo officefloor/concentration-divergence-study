@@ -150,12 +150,19 @@ trove's benchmark classes, all negatives, outside its source jar.
 ## 7. A post hoc exploration after every oracle had been read
 
 After the confirmatory analysis on the registered populations was read, the candidate forms
-the paper's Section 5.9 reports (size times outgoing calls at class level; the "makes a call"
+the full report's Section 5.9 reports (the paper's Section 5.2) (size times outgoing calls at class level; the "makes a call"
 gate at method level) were computed from the raw records by `scripts/exploratory_ranking.py`
 ({{expMadeUtc}}, sha256 `{{expShaShort}}…`), read at a matched flag rate and as a threshold-free
 AUC by `scripts/exploratory_matched.py` ({{matchedMadeUtc}}, sha256 `{{matchedShaShort}}…`), and the
 registered matrix recomputed on a logarithmic scale by `scripts/exploratory_log_matrix.py`
 ({{logMadeUtc}}, sha256 `{{logShaShort}}…`), and MLCQ's individual reviews joined to the measured
 units by `scripts/exploratory_reviewers.py` ({{revMadeUtc}}, sha256 `{{revShaShort}}…`); each read
-against every oracle, both MLCQ halves included. Nothing registered changes; the forms are hypotheses for a next registration, chosen
+against every oracle, both MLCQ halves included. After those had been read, the constant on length
+the reviews imply was chosen on the explore half and read on the confirm half, and two further
+readings were made on the same half: the live width a reader holds, the variable counts and the
+data flow of every method, by `scripts/exploratory_livewidth.py` over the facts of a second
+measurer pass ({{lwMadeUtc}}, sha256 `{{lwShaShort}}…`; steps 13), and the cost of cutting a long
+method into pieces under that constant, by `scripts/exploratory_split.py` ({{splitMadeUtc}}, sha256
+`{{splitShaShort}}…`; step 14). The confirm half is therefore a hold-out for the constant on length
+alone. Nothing registered changes; the forms are hypotheses for a next registration, chosen
 by looking, and the paper labels every number from them as post hoc.

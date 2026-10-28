@@ -8,7 +8,10 @@
 # without the harness, its results or any Python. Regenerating generated/ from the results is
 # `../.venv/bin/python scripts/tables.py`, not part of the build.
 #
-# Writes: main.pdf, abstract.txt (the abstract as plain text, for the arXiv and Zenodo forms, with
+# report.tex is the full registered report (every secondary, sensitivity and table the paper leaves
+# out), built to report.pdf from the same generated/ and packed under anc/full-report/.
+#
+# Writes: main.pdf, report.pdf, abstract.txt (the abstract as plain text, for the arXiv and Zenodo forms, with
 # a warning past arXiv's 1920 characters) and arxiv.tar.gz, the submission bundle: main.tex and
 # generated/ at the root and, under anc/, the data the paper rests on (see pack() and
 # anc-README.md). The harness's scripts are not packed; they are in the public repository.
@@ -80,6 +83,8 @@ pack() {
   cp "$ROOT"/labels/fontana-labels.csv "$ROOT"/labels/fontana-systems.csv "$d/" 2>/dev/null || echo "   ! Fontana labels missing: run scripts/fetch_fontana.sh and ./step6_run_fontana.sh" >&2
   cp "$ROOT"/inputs/fontana/ACCESS.md "$ROOT"/inputs/fontana/SHA256SUMS "$d/" 2>/dev/null || true
   cp "$ROOT/PLAN.md" "$ROOT/SINEW.md" "$stage/anc/"
+  mkdir -p "$stage/anc/full-report"
+  cp report.tex report.pdf "$stage/anc/full-report/" 2>/dev/null || echo "   ! report.pdf missing" >&2
   tar czf arxiv.tar.gz main.tex generated -C "$stage" anc
   echo "Packed arxiv.tar.gz ($(tar tzf arxiv.tar.gz | grep -c .) entries, $(du -h arxiv.tar.gz | cut -f1))"
 }
@@ -93,4 +98,8 @@ pdflatex -interaction=nonstopmode -halt-on-error main.tex > build.log 2>&1 || { 
 pdflatex -interaction=nonstopmode -halt-on-error main.tex > build.log 2>&1 || { grep -n "^!" -A 3 build.log | head -40; exit 1; }
 echo "Built main.pdf ($(pdfinfo main.pdf 2>/dev/null | awk '/Pages/{print $2}') pages); $(grep -c Overfull build.log || true) overfull boxes, $(grep -c 'LaTeX Warning' build.log || true) LaTeX warnings (see build.log)"
 grep -n "undefined\|Undefined\|multiply" build.log | head -20 || true
+pdflatex -interaction=nonstopmode -halt-on-error report.tex > build-report.log 2>&1 || { grep -n "^!" -A 3 build-report.log | head -40; exit 1; }
+pdflatex -interaction=nonstopmode -halt-on-error report.tex > build-report.log 2>&1 || { grep -n "^!" -A 3 build-report.log | head -40; exit 1; }
+echo "Built report.pdf, the full registered report ($(pdfinfo report.pdf 2>/dev/null | awk '/Pages/{print $2}') pages)"
+grep -n "undefined\|Undefined\|multiply" build-report.log | head -20 || true
 pack

@@ -8,3 +8,8 @@ abstract.txt
 arxiv.tar.gz
 main.txt
 *.png
+report.pdf
+report.aux
+report.log
+report.out
+build-report.log

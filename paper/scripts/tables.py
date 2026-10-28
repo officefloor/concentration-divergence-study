@@ -10,6 +10,7 @@ Reads   results/analysis.json            the confirmatory analysis (PLAN.md, Pro
         results/<set>/scores/*.npz       (optional, through the harness) the reviewed units each
                                          human population leaves out, for Section 6
         labels/mlcq-summary.json, sample/seed3-measured.json, analysis-hashes.txt
+        results/exploratory/livewidth.*.json, split.*.json   the post hoc live width and split cost (steps 13, 14)
 Writes  paper/generated/numbers.tex      one \\newcommand per number
         paper/generated/tab_*.tex        every table the paper places
 
@@ -1264,6 +1265,79 @@ def main() -> int:
             rm_ = {r["form"]: r for r in pm_["rows"]}
             M("logMethodForms", str(len(pm_["rows"]))); M("logMethodBetter", str(pm_["log_better"])); M("logMethodWorse", str(pm_["log_worse"]))
             M("logTokensFlagsRaw", str(rm_["tokens"]["flagged_raw"])); M("logTokensFlagsLog", str(rm_["tokens"]["flagged_log"]))
+
+    # --- live width and the split cost (scripts/exploratory_livewidth.py, scripts/exploratory_split.py;
+    #     post hoc, after the cutoff on length had been chosen and read) -------------------------------
+    def latest(prefix):
+        k = (sorted(glob.glob(os.path.join(ROOT, "results", "exploratory", f"{prefix}.*.json"))) or [None])[-1]
+        return (k, json.load(open(k))) if k and os.path.exists(k) else (None, None)
+
+    def stamp(tag, k, D):
+        M(f"{tag}MadeUtc", D["made_utc"][:8] + " " + D["made_utc"][9:15] + " UTC")
+        shafile = k + ".sha256"
+        M(f"{tag}ShaShort", open(shafile).read().split()[0][:12] if os.path.exists(shafile) else "n/a")
+
+    def pop_of(D, prefix):
+        return next((q for q in D["populations"] if q["population"].startswith(prefix)), None)
+
+    lwk, LW = latest("livewidth")
+    if LW:
+        stamp("lw", lwk, LW)
+        ho = LW["held_out"]["human_method_long_method|method"]
+        rows = {r["form"]: r for r in ho["rows"]}
+        length = rows[ho["length"]]
+        M("lwLengthCutoff", re.sub(r"[^0-9]", "", length["cutoff"]))
+        M("lwLengthMccConfirm", rate(length["mcc"], 3)); M("lwLengthFlagged", str(length["flagged"])); M("lwLengthHits", str(length["hits"]))
+        M("lwLengthPrecision", rate(length["precision"])); M("lwLengthRecall", rate(length["recall"]))
+        M("lwLengthVsRule", est(length["vs_reference_mad_z"]))
+        others = [r for r in ho["rows"] if r["form"] != ho["length"]]
+        M("lwHeldOutForms", str(len(others)))
+        best = max(others, key=lambda r: r["mcc"])
+        M("lwBestFormMcc", rate(best["mcc"], 3)); M("lwBestFormVsLength", est(best["vs_length_cutoff"]))
+        M("lwBestFormName", tex_escape(best["form"]))
+        hv = rows.get(f"lw max {LW['headline_variant']}")
+        if hv:
+            M("lwWidthMcc", rate(hv["mcc"], 3)); M("lwWidthVsLength", est(hv["vs_length_cutoff"])); M("lwWidthCutoff", re.sub(r"[^0-9]", "", hv["cutoff"]))
+        M("lwFormsBelowLength", str(sum(1 for r in others if r["vs_length_cutoff"]["hi"] < 0)))
+        M("lwFormsTieLength", str(sum(1 for r in others if r["vs_length_cutoff"]["hi"] >= 0)))
+        cp = pop_of(LW, "human_method_long_method [confirm]")
+        if cp:
+            th = {c["rule"]: c["mcc"] for c in cp["threshold"]["nloc"]}
+            M("lwNlocTwentyMcc", rate(th[">=20"], 3)); M("lwNlocThirtyMcc", rate(th[">=30"], 3)); M("lwNlocFortyMcc", rate(th[">=40"], 3))
+            M("lwConfirmRepos", str(cp["n_repos"])); M("lwConfirmUnits", count(cp["n_units"])); M("lwConfirmPositives", str(cp["n_positives"]))
+    spk, SP = latest("split")
+    if SP:
+        stamp("split", spk, SP)
+        ho = SP["held_out"]["human_method_long_method|method"]
+        rows = {r["form"]: r for r in ho["rows"]}
+        others = [r for r in ho["rows"] if r["form"] != ho["length"]]
+        M("splitHeldOutForms", str(len(others)))
+        for form, tag in (("split cost", "Cost"), ("split width", "Width"), ("split width [structural]", "Struct"), ("split infeasible", "Infeasible")):
+            if form in rows:
+                M(f"split{tag}Mcc", rate(rows[form]["mcc"], 3)); M(f"split{tag}VsLength", est(rows[form]["vs_length_cutoff"]))
+                M(f"split{tag}Cutoff", re.sub(r"[^0-9.]", "", rows[form]["cutoff"])); M(f"split{tag}Flagged", str(rows[form]["flagged"]))
+        cp = pop_of(SP, "human_method_long_method [confirm]")
+        if cp and cp.get("within_long"):
+            wl = {r["form"]: r for r in cp["within_long"]}
+            auc_key = next(k for k in wl["nloc"] if k.startswith("auc") and isinstance(wl["nloc"][k], dict))
+            vs_key = next((k for k in wl["split cost"] if k.startswith("vs_nloc") and isinstance(wl["split cost"][k], dict)), None)
+            M("splitWithinN", count(wl["nloc"]["n_long"])); M("splitWithinPositives", str(wl["nloc"]["n_positives"]))
+            unsigned = lambda iv: f"{rate(iv['value'], 3)} [{rate(iv['lo'], 3)}, {rate(iv['hi'], 3)}]"
+            M("splitNlocAucWithin", unsigned(wl["nloc"][auc_key])); M("splitCostAucWithin", unsigned(wl["split cost"][auc_key]))
+            if vs_key:
+                M("splitCostAucVsNloc", est(wl["split cost"][vs_key])); M("splitWidthAucVsNloc", est(wl["split width"][vs_key]))
+        hb = SP["held_out"].get("human_blob|class")
+        if hb:
+            rb = {r["form"]: r for r in hb["rows"]}
+            if "locked share" in rb:
+                M("splitLockedShareMcc", rate(rb["locked share"]["mcc"], 3)); M("splitLockedShareVsLength", est(rb["locked share"]["vs_length_cutoff"]))
+                M("splitLockedShareCutoff", rb["locked share"]["cutoff"].replace(">=", "")); M("splitBlobLengthMcc", rate(rb[hb["length"]]["mcc"], 3))
+        fp = pop_of(SP, "human_fontana_god_class")
+        if fp:
+            ro = {r["form"]: r for r in fp["outlier"]}
+            if "locked share" in ro:
+                M("splitFontanaLockedMcc", rate(ro["locked share"]["mcc"], 3)); M("splitFontanaLockedVsHvol", est(ro["locked share"]["vs_complexity"]))
+                M("splitFontanaHvolMcc", rate(ro["hvol_sum"]["mcc"], 3))
 
     # the ancillary account of every deviation, from the same numbers
     def plain(v: str) -> str:

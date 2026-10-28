@@ -60,11 +60,11 @@ INLINE NUMBERS (generated/numbers.tex, about 800 macros)
                fontana, matrix) and the JavaParser-set counterparts named *Jp*
   sens*        sensitivity/joined and sensitivity/javaparser
   inter*       exploratory_intersection/joined
-  exp*         results/exploratory/ranking.<utc>.json, the post hoc exploration (Section 5.9);
+  exp*         results/exploratory/ranking.<utc>.json, the post hoc exploration (paper, Section 5.2; full report, Section 5.9);
                --ranking FILE selects a file, the default is the latest
-  matched*     results/exploratory/matched.<utc>.json, ranking or flag rate (Section 5.9); --matched FILE
-  log*         results/exploratory/log-matrix.<utc>.json, the log-scale matrix (Section 5.9); --log-matrix FILE
-  rev*         results/exploratory/reviewers.<utc>.json, what the reviewers judge (Section 5.9)
+  matched*     results/exploratory/matched.<utc>.json, ranking or flag rate (paper, Section 5.2; full report, Section 5.9); --matched FILE
+  log*         results/exploratory/log-matrix.<utc>.json, the log-scale matrix (paper, Section 5.2; full report, Section 5.9); --log-matrix FILE
+  rev*         results/exploratory/reviewers.<utc>.json, what the reviewers judge (paper, Section 5.2; full report, Section 5.9)
   join*, calls*, role*, throwNew*, di*, pruned*, files*, scale*, zero*, uncoupled*, labels*,
   agree*, pmdCog*, mlcq*, seedThree*, fontana*, validation*
                diagnostics/<set>, results/<set>/validation.json,
