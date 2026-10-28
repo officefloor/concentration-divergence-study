@@ -161,8 +161,8 @@ against every oracle, both MLCQ halves included. After those had been read, the 
 the reviews imply was chosen on the explore half and read on the confirm half, and two further
 readings were made on the same half: the live width a reader holds, the variable counts and the
 data flow of every method, by `scripts/exploratory_livewidth.py` over the facts of a second
-measurer pass (20261028 071327 UTC, sha256 `944570d5aa1b…`; steps 13), and the cost of cutting a long
-method into pieces under that constant, by `scripts/exploratory_split.py` (20261028 100823 UTC, sha256
-`4c92cacd6f2c…`; step 14). The confirm half is therefore a hold-out for the constant on length
+measurer pass (20261028 071327 UTC, sha256 `944570d5aa1b…`; step 13), and the cost of cutting a long
+method into pieces under that constant, by `scripts/exploratory_split.py` (20261028 143738 UTC, sha256
+`9abdee6de69f…`; step 14). The confirm half is therefore a hold-out for the constant on length
 alone. Nothing registered changes; the forms are hypotheses for a next registration, chosen
 by looking, and the paper labels every number from them as post hoc.

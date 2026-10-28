@@ -10,7 +10,10 @@ method of every snapshot. SPLIT.md sets the question out: at the same length, do
 code carry wider seams, and does the architecture change that?
 
 Per method: length (nloc), the live width [loop,role,all], the whole method's binding to its
-class, and for a method at or over the cap its split (default and records variants); for every
+class, and for a method at or over the cap its split (default and records variants, and the
+framework variant, split.FRAMEWORK: the pieces as functions the framework calls in sequence,
+a pass-through parameter injected for nothing and each value handed on a declared variable,
+the reading an OfficeFloor function gets); for every
 method with two or more statements the narrowest waist (split.waist): the cheapest seam of any
 head or tail run of any sequence whose extraction leaves both sides at least a third of the
 lines. Each method is new (its file and name are not in
@@ -25,6 +28,12 @@ independently since the chains are not paired.
     .venv/bin/python scripts/exploratory_petclinic.py                      # the control run's tips
     .venv/bin/python scripts/exploratory_petclinic.py --strategy impact_gated --run blind-202609010045
     .venv/bin/python scripts/exploratory_petclinic.py --trajectory           # every checkpoint (~1,200 snapshots)
+    .venv/bin/python scripts/exploratory_petclinic.py \\
+        --arm angular-spring=~/officehq-angular-spring:base-empty \\
+        --arm tanstack-officefloor=~/officehq-tanstack-officefloor:base-empty \\
+        --branch '202610241-*/just-solve/*' --branch '2026101[789]*/just-solve/*' --at 40
+                                                                            # OfficeHQ: two repositories, one per arm,
+                                                                            # the chains of one checkpoint ladder, read at checkpoint 40
 
 Writes results/exploratory/petclinic.<utc>.json (with its sha256) and
 results/exploratory/petclinic-units.<utc>.csv.gz: one row per method per snapshot.
@@ -55,9 +64,15 @@ import livewidth as lw  # noqa: E402
 import split as sp  # noqa: E402
 import exploratory_split as es  # noqa: E402
 
-ARMS = {"spring": ("spring", "spring-compare-no-tests"),
-        "officefloor": ("officefloor", "officefloor-compare-no-tests")}
-HOTSPOT = {"spring": ("OwnerRestControllerV1.java", "addOwner"), "officefloor": None}
+# an arm: name -> (repository, base ref, hotspot). The hotspot is ("method", "File.java", "name")
+# for a named entry handler, ("dir", "/path/fragment/") for the longest method under a directory,
+# or None for the longest AI-written method. The defaults are the PetClinic-Evolve arms; any
+# other pair of repositories built by the same harness is given with --arm.
+DEFAULT_ARMS = {"spring": (os.path.expanduser("~/compare/spring"), "spring-compare-no-tests",
+                           ("method", "OwnerRestControllerV1.java", "addOwner")),
+                "officefloor": (os.path.expanduser("~/compare/officefloor"), "officefloor-compare-no-tests",
+                                ("dir", "/rest/function/"))}
+ARMS: dict = dict(DEFAULT_ARMS)
 FUNCTION_DIR = "/rest/function/"
 WIDTH = ("loop", "role", "all", "use")
 REPS, SEED = 2000, 12345
@@ -68,24 +83,52 @@ def git(repo: str, *args: str) -> str:
     return subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True, check=True).stdout
 
 
-def snapshots(repo: str, base: str, run: str, strategy: str, arm: str, trajectory: bool) -> list[dict]:
-    """[{chain, checkpoint, commit}] for the base (chain None), then each chain's tip, or every
-    agent commit in order with --trajectory."""
-    out = [{"chain": None, "checkpoint": 0, "commit": git(repo, "rev-parse", base).strip()}]
-    refs = git(repo, "for-each-ref", "--format=%(refname:short)", f"refs/heads/evolve/{run}/{strategy}/{arm}").split()
-    for ref in sorted(refs, key=lambda r: int(re.search(r"chain(\d+)$", r).group(1))):
-        chain = int(re.search(r"chain(\d+)$", ref).group(1))
+def branches(repo: str, patterns: list[str], arm: str) -> list[str]:
+    """The evolve branches matching any pattern (a glob on 'run/strategy/chainN', or on
+    'run/strategy/arm/chainN' as the PetClinic harness names them, where the arm component must
+    be this arm's), local heads and the remote-tracking ones, each once."""
+    import fnmatch
+    seen, out = set(), []
+    for prefix in ("refs/heads/evolve/", "refs/remotes/origin/evolve/"):
+        for ref in git(repo, "for-each-ref", "--format=%(refname)", prefix).split():
+            short = ref[len(prefix):]
+            parts = short.split("/")
+            if short in seen or not any(fnmatch.fnmatch(short, p) for p in patterns):
+                continue
+            if len(parts) == 4 and parts[2] != arm:
+                continue                    # the other arm's chain in a clone that holds both
+            seen.add(short)
+            out.append(ref)
+    return sorted(out, key=lambda r: (r.rsplit("/", 1)[0], int(re.search(r"chain(\d+)$", r).group(1))))
+
+
+def snapshots(repo: str, base: str, patterns: list[str], trajectory: bool, at: int | None, arm: str) -> list[dict]:
+    """[{run, chain, checkpoint, commit}] for the base (chain None), then per matching branch its
+    tip, or its agent commit at checkpoint `at` (skipped when the chain never reached it), or
+    every agent commit in order with --trajectory."""
+    out = [{"run": None, "chain": None, "checkpoint": 0, "commit": git(repo, "rev-parse", base).strip()}]
+    for ref in branches(repo, patterns, arm):
+        short = ref.split("/evolve/", 1)[1]
+        chain = int(re.search(r"chain(\d+)$", short).group(1))
+        run = short.rsplit("/chain", 1)[0]
+        log = git(repo, "log", "--reverse", "--format=%H %s", f"{base}..{ref}")
+        agent = []
+        for line in log.splitlines():
+            h, _, subject = line.partition(" ")
+            m = re.match(r"cp(\d+) agent ", subject)
+            if m:
+                agent.append((int(m.group(1)), h))
         if trajectory:
-            log = git(repo, "log", "--reverse", "--format=%H %s", f"{base}..{ref}")
-            for line in log.splitlines():
-                h, _, subject = line.partition(" ")
-                m = re.match(r"cp(\d+) agent ", subject)
-                if m:
-                    out.append({"chain": chain, "checkpoint": int(m.group(1)), "commit": h})
+            out += [{"run": run, "chain": chain, "checkpoint": cp, "commit": h} for cp, h in agent]
+        elif at is not None:
+            hit = [h for cp, h in agent if cp == at]
+            if hit:
+                out.append({"run": run, "chain": chain, "checkpoint": at, "commit": hit[-1]})
+            else:
+                print(f"  {short}: no checkpoint {at} (reached {max(cp for cp, _ in agent) if agent else 0}); skipped", file=sys.stderr)
         else:
-            log = git(repo, "log", "--format=%s", f"{base}..{ref}")
-            cps = [int(m.group(1)) for m in (re.match(r"cp(\d+) agent ", s) for s in log.splitlines()) if m]
-            out.append({"chain": chain, "checkpoint": max(cps) if cps else 0, "commit": git(repo, "rev-parse", ref).strip()})
+            out.append({"run": run, "chain": chain, "checkpoint": max((cp for cp, _ in agent), default=0),
+                        "commit": git(repo, "rev-parse", ref).strip()})
     return out
 
 
@@ -118,7 +161,7 @@ def method_rows(arm: str, snap: dict, doc: dict, facts: dict, base_names: set, t
         path, name, line = key
         nloc = int(ml.values["nloc"][i])
         origin = "new" if (path, name) not in base_names else ("modified" if path in touched else "untouched")
-        row = {"arm": arm, "chain": snap["chain"], "checkpoint": snap["checkpoint"], "commit": snap["commit"][:12],
+        row = {"arm": arm, "run": snap["run"], "chain": snap["chain"], "checkpoint": snap["checkpoint"], "commit": snap["commit"][:12],
                "file": path, "name": name, "line": line, "origin": origin, "function": FUNCTION_DIR in path,
                "nloc": nloc, "cc": int(ml.values["cc"][i]), "facts": 0, "lw_max": None, "binding": "",
                "long": int(nloc >= sp.DEFAULT.trigger)}
@@ -137,6 +180,10 @@ def method_rows(arm: str, snap: dict, doc: dict, facts: dict, base_names: set, t
             if nloc >= sp.DEFAULT.trigger:
                 r = sp.split(m, own, sp.DEFAULT, nloc)
                 v = sp.split(m, own, sp.RECORDS, nloc)
+                fw = sp.split(m, own, sp.FRAMEWORK, nloc)
+                row.update({"split_width_fw": fw.width, "split_cost_fw": fw.cost, "split_pieces_fw": fw.pieces,
+                            "split_infeasible_fw": int(not fw.feasible), "split_locked_fw": fw.locked + int(fw.remainder_locked),
+                            "split_units_fw": fw.pieces + 1})
                 row.update({"split_width": r.width, "split_cost": r.cost, "split_pieces": r.pieces,
                             "split_infeasible": int(not r.feasible),
                             "split_locked": r.locked + int(r.remainder_locked), "split_units": r.pieces + 1,
@@ -180,22 +227,28 @@ def summarise(rows: list[dict]) -> dict:
         out[f"split_width_max{suffix}"] = max([r.get("split_width", 0) for r in longs if not r.get("split_infeasible")] or [0])
         out[f"split_infeasible{suffix}"] = sum(r.get("split_infeasible", 0) for r in longs)
         out[f"split_infeasible_records{suffix}"] = sum(r.get("split_infeasible_records", 0) for r in longs)
+        out[f"split_infeasible_fw{suffix}"] = sum(r.get("split_infeasible_fw", 0) for r in longs)
+        out[f"split_cost_sum_fw{suffix}"] = sum(r.get("split_cost_fw", 0) for r in longs if not r.get("split_infeasible_fw"))
+        out[f"split_width_max_fw{suffix}"] = max([r.get("split_width_fw", 0) for r in longs if not r.get("split_infeasible_fw")] or [0])
         lu = sum(r.get("split_units", 0) for r in longs if not r.get("split_infeasible"))
         out[f"split_locked_share{suffix}"] = (sum(r.get("split_locked", 0) for r in longs if not r.get("split_infeasible")) / lu) if lu else None
     return out
 
 
 def hotspot(arm: str, rows: list[dict]) -> dict | None:
-    if HOTSPOT[arm]:
-        f, n = HOTSPOT[arm]
-        hs = [r for r in rows if r["file"].endswith(f) and r["name"] == n]
+    spec = ARMS[arm][2]
+    if spec and spec[0] == "method":
+        hs = [r for r in rows if r["file"].endswith(spec[1]) and r["name"] == spec[2]]
+    elif spec and spec[0] == "dir":
+        hs = [r for r in rows if spec[1] in r["file"]]
     else:
-        hs = [r for r in rows if r["function"]]
+        hs = [r for r in rows if r["origin"] != "untouched"]
     if not hs:
         return None
     r = max(hs, key=lambda r: r["nloc"])
     keep = ("file", "name", "nloc", "cc", "lw_max", "binding", "waist_width", "waist_cost", "split_width", "split_cost",
-            "split_pieces", "split_infeasible", "split_locked", "split_units", "split_cost_records")
+            "split_pieces", "split_infeasible", "split_locked", "split_units", "split_cost_records",
+            "split_width_fw", "split_cost_fw", "split_pieces_fw", "split_infeasible_fw")
     return {k: r.get(k) for k in keep}
 
 
@@ -222,6 +275,7 @@ KEYS = ["methods", "n_ai", "long", "long_ai", "nloc_max", "nloc_max_ai", "excess
         "lw_max_median_ai", "lw_max_p90_ai", "waist_median_ai", "waist_p90_ai", "waist_ge3_share_ai", "waist_cost_mean_ai",
         "free_share_ai", "bound_share_ai", "locked_share_ai",
         "split_cost_sum", "split_width_max", "split_infeasible", "split_infeasible_records", "split_locked_share",
+        "split_infeasible_fw", "split_cost_sum_fw", "split_width_max_fw",
         "waist_median", "waist_p90", "lw_max_p90", "locked_share"]
 
 
@@ -231,25 +285,39 @@ def f(x, nd=2) -> str:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--spring-repo", default=os.path.expanduser("~/compare/spring"))
-    ap.add_argument("--officefloor-repo", default=os.path.expanduser("~/compare/officefloor"))
+    ap.add_argument("--arm", action="append", default=None, metavar="NAME=REPO:BASE[:method=File.java::name | :dir=/fragment/]",
+                    help="an arm (repeatable; default: the two PetClinic-Evolve arms). The first named is reported first and the difference is first minus second.")
+    ap.add_argument("--branch", action="append", default=None, metavar="GLOB",
+                    help="evolve branches to read, a glob on run/strategy/chainN or run/strategy/arm/chainN (repeatable; default: the PetClinic control run)")
     ap.add_argument("--run", default="blind-202608100006")
     ap.add_argument("--strategy", default="just-solve")
+    ap.add_argument("--at", type=int, default=None, help="read every chain at this checkpoint instead of its tip")
     ap.add_argument("--trajectory", action="store_true", help="every checkpoint's agent commit, not only the tips")
     ap.add_argument("--out", default=None)
     a = ap.parse_args(argv)
+    if a.arm:
+        ARMS.clear()
+        for spec in a.arm:
+            name, rest = spec.split("=", 1)
+            repo, base, *hot = rest.split(":", 2)
+            h = None
+            if hot:
+                kind, val = hot[0].split("=", 1)
+                h = ("method", *val.split("::", 1)) if kind == "method" else ("dir", val)
+            ARMS[name] = (os.path.expanduser(repo), base, h)
+    arms = list(ARMS)
+    assert len(arms) == 2, "two arms"
+    patterns = a.branch or [f"{a.run}/{a.strategy}/*"]
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    repos = {"spring": a.spring_repo, "officefloor": a.officefloor_repo}
     out = {"kind": "exploratory", "made_utc": stamp, "harness_commit": pins.harness_commit(),
-           "note": __doc__.splitlines()[0], "run": a.run, "strategy": a.strategy, "trajectory": a.trajectory,
-           "params": {"default": asdict(sp.DEFAULT), "records": asdict(sp.RECORDS)}, "width_variant": lw.label(WIDTH),
+           "note": __doc__.splitlines()[0], "branches": patterns, "at": a.at, "trajectory": a.trajectory,
+           "params": {"default": asdict(sp.DEFAULT), "records": asdict(sp.RECORDS), "framework": asdict(sp.FRAMEWORK)}, "width_variant": lw.label(WIDTH),
            "arms": {}, "snapshots": [], "hotspots": [], "by_arm": {}, "difference": {}}
     all_rows: list[dict] = []
     summaries: dict = {arm: [] for arm in ARMS}
-    for arm, (_, base) in ARMS.items():
-        repo = repos[arm]
-        snaps = snapshots(repo, base, a.run, a.strategy, arm, a.trajectory)
-        out["arms"][arm] = {"repo": repo, "base": base, "snapshots": len(snaps), "chains": len({s["chain"] for s in snaps if s["chain"] is not None})}
+    for arm, (repo, base, _) in ARMS.items():
+        snaps = snapshots(repo, base, patterns, a.trajectory, a.at, arm)
+        out["arms"][arm] = {"repo": repo, "base": base, "snapshots": len(snaps), "chains": len({(s["run"], s["chain"]) for s in snaps if s["chain"] is not None})}
         base_names: set = set()
         for k, snap in enumerate(snaps):
             doc, facts, files = measure(repo, snap["commit"])
@@ -261,24 +329,26 @@ def main(argv=None) -> int:
             rows = method_rows(arm, snap, doc, facts, base_names, touched)
             all_rows += rows
             s = summarise(rows)
-            s.update({"arm": arm, "chain": snap["chain"], "checkpoint": snap["checkpoint"], "commit": snap["commit"][:12], "files": len(files)})
+            s.update({"arm": arm, "run": snap["run"], "chain": snap["chain"], "checkpoint": snap["checkpoint"], "commit": snap["commit"][:12], "files": len(files)})
             out["snapshots"].append(s)
             h = hotspot(arm, rows)
             if h:
-                out["hotspots"].append({"arm": arm, "chain": snap["chain"], "checkpoint": snap["checkpoint"], **h})
-            if snap["chain"] is not None and (not a.trajectory or snap["checkpoint"] == max(x["checkpoint"] for x in snaps if x["chain"] == snap["chain"])):
+                out["hotspots"].append({"arm": arm, "run": snap["run"], "chain": snap["chain"], "checkpoint": snap["checkpoint"], **h})
+            if snap["chain"] is not None and (not a.trajectory or snap["checkpoint"] == max(x["checkpoint"] for x in snaps if (x["run"], x["chain"]) == (snap["run"], snap["chain"]))):
                 summaries[arm].append(s)
-            print(f"  {arm}: {k + 1}/{len(snaps)} snapshots (chain {snap['chain']}, cp {snap['checkpoint']}: "
+            print(f"  {arm}: {k + 1}/{len(snaps)} snapshots ({snap['run']} chain {snap['chain']}, cp {snap['checkpoint']}: "
                   f"{s['methods']} methods, {s['long']} long, nloc max {s['nloc_max']})", file=sys.stderr)
     rng = np.random.default_rng(SEED)
+    A, B = arms
     for key in KEYS:
         out["by_arm"][key] = {arm: boot_mean([s.get(key) for s in summaries[arm]], rng) for arm in ARMS}
-        out["difference"][key] = boot_diff([s.get(key) for s in summaries["spring"]], [s.get(key) for s in summaries["officefloor"]], rng)
+        out["difference"][key] = boot_diff([s.get(key) for s in summaries[A]], [s.get(key) for s in summaries[B]], rng)
     # the report
-    print(f"\n=== {a.run} / {a.strategy}: {len(summaries['spring'])} Spring chains, {len(summaries['officefloor'])} OfficeFloor chains, chain tips ===")
-    print(f"  {'per chain tip':30s} {'Spring':>22s}   {'OfficeFloor':>22s}   {'Spring - OfficeFloor':>28s}")
+    where = f"checkpoint {a.at}" if a.at is not None else "chain tips"
+    print(f"\n=== {', '.join(patterns)}: {len(summaries[A])} {A} chains, {len(summaries[B])} {B} chains, {where} ===")
+    print(f"  {'per chain':30s} {A:>22s}   {B:>22s}   {A + ' - ' + B:>28s}")
     for key in KEYS:
-        s, o, d = out["by_arm"][key]["spring"], out["by_arm"][key]["officefloor"], out["difference"][key]
+        s, o, d = out["by_arm"][key][A], out["by_arm"][key][B], out["difference"][key]
         if s.get("n") and o.get("n"):
             print(f"  {key:30s} {f(s['median']):>7s} [{f(s['lo'])}, {f(s['hi'])}]   {f(o['median']):>7s} [{f(o['lo'])}, {f(o['hi'])}]   "
                   f"{d['value']:+.2f} [{d['lo']:+.2f}, {d['hi']:+.2f}]")
@@ -288,24 +358,22 @@ def main(argv=None) -> int:
         b = base[arm]
         print(f"    {arm:12s} methods {b['methods']}, long {b['long']}, nloc max {b['nloc_max']}, waist median {f(b['waist_median'])} p90 {f(b['waist_p90'])}, "
               f"lw max p90 {f(b['lw_max_p90'])}, locked share {f(b['locked_share'])}")
-    print("\n  the hotspot at each chain's tip (Spring: the entry handler; OfficeFloor: the longest wired function):")
-    for h in out["hotspots"]:
-        if h["chain"] is not None and (not a.trajectory or True):
-            pass
+    print("\n  the hotspot per chain (a named entry handler, the longest method under a directory, or the longest AI-written method):")
     tips = {}
     for h in out["hotspots"]:
         if h["chain"] is not None:
-            tips[(h["arm"], h["chain"])] = h       # the last one per chain wins: the tip
-    for (arm, chain), h in sorted(tips.items()):
-        print(f"    {arm:12s} chain {chain}: {h['name']:28s} nloc {h['nloc']:3d} cc {h['cc']:2d} lw {f(h['lw_max'],0):>3s} {h['binding']:7s} "
+            tips[(h["arm"], h["run"], h["chain"])] = h       # the last one per chain wins: the tip
+    for (arm, run, chain), h in sorted(tips.items(), key=lambda kv: (arms.index(kv[0][0]), kv[0][1], kv[0][2])):
+        print(f"    {arm:12s} {run} chain {chain}: {h['name']:28s} nloc {h['nloc']:3d} cc {h['cc']:2d} lw {f(h['lw_max'],0):>3s} {h['binding']:7s} "
               f"waist {f(h['waist_width'],0):>3s} split width {f(h.get('split_width'),0):>3s} cost {f(h.get('split_cost'),0):>3s} "
-              f"pieces {f(h.get('split_pieces'))} infeasible {f(h.get('split_infeasible'))} locked {f(h.get('split_locked'))}/{f(h.get('split_units'))}")
+              f"pieces {f(h.get('split_pieces'))} infeasible {f(h.get('split_infeasible'))} locked {f(h.get('split_locked'))}/{f(h.get('split_units'))}"
+              f" | framework: width {f(h.get('split_width_fw'),0):>3s} cost {f(h.get('split_cost_fw'),0):>3s} pieces {f(h.get('split_pieces_fw'))} infeasible {f(h.get('split_infeasible_fw'))}")
     os.makedirs(os.path.join(pins.RESULTS, "exploratory"), exist_ok=True)
     path = a.out or os.path.join(pins.RESULTS, "exploratory", f"petclinic.{stamp}.json")
     with open(path, "w") as fh:
         json.dump(out, fh, indent=1)
     upath = os.path.join(os.path.dirname(path), f"petclinic-units.{stamp}.csv.gz")
-    header = sorted({k for r in all_rows for k in r}, key=lambda k: (k not in ("arm", "chain", "checkpoint", "commit", "file", "name", "line", "origin"), k))
+    header = sorted({k for r in all_rows for k in r}, key=lambda k: (k not in ("arm", "run", "chain", "checkpoint", "commit", "file", "name", "line", "origin"), k))
     with gzip.open(upath, "wt", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=header, lineterminator="\n")
         w.writeheader()

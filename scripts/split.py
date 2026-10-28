@@ -66,12 +66,18 @@ class Params:
     structural_only: bool = False  # pieces are whole if, loop, try and switch statements only
     lock_on_any_field: bool = False  # a field read locks a piece too (default: a write, or an own call)
     side_fraction: float = 1 / 3   # the narrowest waist: each side of the cut holds at least this share of the lines
+    free_params: bool = False  # a parameter of the method handed to a piece unchanged costs nothing: the
+                               # framework injects it into the piece (OfficeFloor function injection)
 
 
 DEFAULT = Params()
 STRUCTURAL = Params(structural_only=True)
 UNLIMITED = Params(max_inputs=-1)      # whether an infeasible method fails on inputs or on outputs
 RECORDS = Params(max_outputs=-1)       # several returns allowed, each costed as a record's value
+# the pieces are functions the framework calls in sequence: a pass-through parameter is injected
+# into each piece for nothing, and a value one piece computes for a later one is a declared
+# variable between them, one per value, no record type
+FRAMEWORK = Params(free_params=True, max_outputs=-1, multi_output_weight=1)
 
 
 @dataclass(frozen=True)
@@ -84,6 +90,7 @@ class Seam:
     fields_read: tuple
     fields_written: tuple
     own_calls: int
+    passed: tuple = ()      # the method's own parameters handed on unchanged; in `inputs` too unless free
 
     @property
     def width(self) -> int:
@@ -163,7 +170,8 @@ def tree_lines(node: list) -> set:
 
 
 class Method:
-    def __init__(self, m: dict, own_call_lines=()):
+    def __init__(self, m: dict, own_call_lines=(), free_params: bool = False):
+        self.free_params = free_params
         self.tree = m["tree"]
         code = tree_lines(self.tree)
         first = m.get("decl_line", m.get("name_line", self.tree[lw.S_START]))
@@ -193,7 +201,7 @@ class Method:
         return s
 
     def _seam(self, lo: int, hi: int) -> Seam:
-        inputs, outputs, moved, fread, fwrit = [], [], [], [], []
+        inputs, outputs, moved, fread, fwrit, passed = [], [], [], [], [], []
         enclosing = [(a, b) for a, b in self.loops if a < lo and hi <= b]
         for name, kind, refs, defs, muts, touches, decl in self.vars:
             if kind == lw.FIELD:
@@ -208,7 +216,11 @@ class Method:
             before = _any_below(refs, lo) or _any_below(muts, lo) or _any_below_but(defs, lo, decl)
             after = _any_above(touches, hi)
             written = _any(defs, lo, hi)
-            if kind == lw.PARAM or before:
+            if kind == lw.PARAM and not _any_below(defs, lo) and not _any_below(muts, lo):
+                passed.append(name)                 # handed on as it came
+                if not self.free_params:
+                    inputs.append(name)
+            elif kind == lw.PARAM or before:
                 inputs.append(name)
             back_edge = written and any(_any(refs, a, lo - 1) for a, _ in enclosing)
             if written and (after or back_edge):
@@ -216,7 +228,7 @@ class Method:
             elif decl is not None and decl < lo and not before and not after:
                 moved.append(name)
         own = bisect_right(self.own_calls, hi) - bisect_left(self.own_calls, lo)
-        return Seam(lo, hi, tuple(inputs), tuple(outputs), tuple(moved), tuple(fread), tuple(fwrit), own)
+        return Seam(lo, hi, tuple(inputs), tuple(outputs), tuple(moved), tuple(fread), tuple(fwrit), own, tuple(passed))
 
 
 def _any(xs: list, lo: int, hi: int) -> bool:
@@ -386,7 +398,7 @@ def split(m: dict, own_call_lines=(), p: Params = DEFAULT, nloc: int | None = No
     """The best segmentation of one method's facts (scripts/livewidth.py, by_unit), or why none.
     `nloc`, when given, is the method's length as the oracle counts it (the measurer record):
     the trigger and the target are read on it, with the lines a cut saves taken from the facts."""
-    M = Method(m, own_call_lines)
+    M = Method(m, own_call_lines, p.free_params)
     total = len(M.code) if nloc is None else int(nloc)
     if total < p.trigger:
         return Result(False, True, 0.0, 0.0, 0, 0, total, [], params=asdict(p))
@@ -444,7 +456,7 @@ def _sequences(node: list, depth: int = 0):
 
 
 def waist(m: dict, own_call_lines=(), p: Params = DEFAULT) -> Waist:
-    M = Method(m, own_call_lines)
+    M = Method(m, own_call_lines, p.free_params)
     total = len(M.code)
     need = p.side_fraction * total
     best, n = None, 0
@@ -470,7 +482,7 @@ def waist(m: dict, own_call_lines=(), p: Params = DEFAULT) -> Waist:
 
 def binding(m: dict, own_call_lines=(), p: Params = DEFAULT) -> str:
     """The whole method's binding to its class, read as a seam over its body."""
-    M = Method(m, own_call_lines)
+    M = Method(m, own_call_lines, p.free_params)
     return M.seam(M.tree[lw.S_START], M.tree[lw.S_END]).binding(p)
 
 

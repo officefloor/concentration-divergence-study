@@ -206,3 +206,22 @@ def test_the_narrowest_waist_reads_on_any_method():
     w = sp.waist(method(body, chain(60)))
     assert w.defined and w.side == "tail"
     assert sp.binding(method(body, chain(60))) == "free"
+
+
+def test_a_parameter_handed_on_unchanged_is_free_under_function_injection():
+    body = seq(1, 62, *[stmt(i) for i in range(2, 62)])
+    # the chain, plus two parameters read everywhere and one reassigned at line 3 before being read
+    vars_ = chain(60) + [V("repo", lw.PARAM, refs=list(range(2, 62))), V("cfg", lw.PARAM, refs=list(range(2, 62))),
+                         V("n", lw.PARAM, refs=list(range(2, 62)), defs=[3])]
+    M = sp.Method(method(body, vars_))
+    s = M.seam(30, 40)
+    assert s.passed == ("repo", "cfg") and set(s.passed) <= set(s.inputs) and "n" in s.inputs
+    assert s.width == 1 + 3 + 1                      # x29 in, repo, cfg, n in, x40 out
+    F = sp.Method(method(body, vars_), free_params=True)
+    t = F.seam(30, 40)
+    assert t.passed == ("repo", "cfg") and t.inputs == ("x29", "n")
+    assert t.width == 3
+    # the default cap of three inputs refuses the pieces; the framework reading takes them
+    assert not sp.split(method(body, vars_)).feasible
+    r = sp.split(method(body, vars_), p=sp.FRAMEWORK)
+    assert r.feasible and r.width <= 3
