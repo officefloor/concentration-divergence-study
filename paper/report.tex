@@ -28,6 +28,8 @@
 \usepackage{amsmath}
 \usepackage{microtype}
 \usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={What reviewers call a Long Method is a length: the full registered report},
+  pdfauthor={Daniel Sagenschneider}, pdfsubject={Software engineering: empirical study of god-unit detectors}}
 \usepackage{caption}
 \captionsetup{font=small,labelfont=bf}
 
@@ -85,8 +87,8 @@ flag rate. At method level length ranks Long Methods best of every form,
 and MLCQ's individual reviews show why: the share calling a method a Long
 Method rises from \revNonLeafTwentyFiveRate{} at 11 to 25 lines to
 \revNonLeafFiftyRate{} at 26 to 50, each reviewer's best cutoff lies between
-\revCutoffMin{} and \revCutoffMax{} lines, and at equal length a leaf is
-called a Long Method no less often than a non-leaf. The reviewers' Long
+\revCutoffMin{} and \revCutoffMax{} lines on their non-leaf reviews, and at
+equal length a leaf is called a Long Method about as often as a non-leaf. The reviewers' Long
 Method is an absolute length, which a per-repository rule is the wrong
 model for: a constant of \lwLengthCutoff{} lines or more, chosen on the
 explore half, reaches MCC \lwLengthMccConfirm{} on the confirm half,
@@ -1097,21 +1099,21 @@ severity.}
 reading that a reviewer asks first whether a method is a self-contained
 algorithm and then whether it is long can be put to the reviews themselves
 (Table~\ref{tab:reviewers}; \revLongUnmapped{} reviews on units the harness
-did not measure are left out). The share of reviews calling a method a
-Long Method is \revNonLeafTenRate{} up to 10 lines,
+did not measure are left out). The share of non-leaf reviews calling a
+method a Long Method is \revNonLeafTenRate{} up to 10 lines,
 \revNonLeafTwentyFiveRate{} at 11 to 25, \revNonLeafFiftyRate{} at 26 to 50
 and \revNonLeafHundredRate{} at 51 to 100: a step at about twenty-five
 lines. Each of the \revCutoffReviewers{} reviewers with ten or more
-positives has a best length cutoff between \revCutoffMin{} and
-\revCutoffMax{} lines (median \revCutoffMedian{}), separating their own
-positive from their negative reviews at an MCC of \revCutoffMccMin{} to
+positives has, on their non-leaf reviews, a best length cutoff between
+\revCutoffMin{} and \revCutoffMax{} lines (median \revCutoffMedian{}),
+separating their own positive from their negative reviews at an MCC of \revCutoffMccMin{} to
 \revCutoffMccMax{}; the median length of a reviewer's positives is
 \revPosMedianMin{} to \revPosMedianMax{} lines and of their negatives at
 most \revNegMedianMax{}. That is an absolute constant, carried from
 reviewer to reviewer within a few lines, which is why a cutoff tuned on
 MLCQ beat the per-repository rule in the companion study and why no
 per-repository form here can reach it. At equal length a leaf is called a
-Long Method no less often than a non-leaf (\revLeafFiftyRate{} against
+Long Method about as often as a non-leaf (\revLeafFiftyRate{} against
 \revNonLeafFiftyRate{} at 26 to 50 lines, \revLeafHundredRate{} against
 \revNonLeafHundredRate{} at 51 to 100; over all long methods
 \revLongLeafMinusNonLeaf{}), reviewers disagree on long leaves no more than
@@ -1138,10 +1140,15 @@ every class form hit.
 
 \paragraph{A constant on length, and what was tried against it.} The
 constant the reviews imply was read once as the plan reads a cutoff: chosen
-on the explore half among absolute cutoffs on lines and read on the confirm
-half (\lwConfirmRepos{} repositories, \lwConfirmUnits{} reviewed methods,
-\lwConfirmPositives{} positives). The cutoff chosen is \lwLengthCutoff{}
-lines or more. On confirm it flags \lwLengthFlagged{} methods with
+on the explore half among \lwNlocGridCount{} absolute cutoffs on lines,
+\lwNlocGrid{}, round numbers with the companion study's tuned cutoff among
+them, and read on the confirm half (\lwConfirmRepos{} repositories,
+\lwConfirmUnits{} reviewed methods, \lwConfirmPositives{} positives). On the
+explore half the cutoffs read \lwExploreTwentyMcc{} at 20,
+\lwExploreChosenMcc{} at \lwLengthCutoff{} and \lwExploreThirtyMcc{} at 30,
+so the cutoff chosen is \lwLengthCutoff{} lines or more; the confirm half is
+a hold-out for the choice among those cutoffs alone, the grid having been
+drawn after the reviews of both halves had been read. On confirm it flags \lwLengthFlagged{} methods with
 \lwLengthHits{} hits, MCC \lwLengthMccConfirm{} (precision
 \lwLengthPrecision{}, recall \lwLengthRecall{}), \lwLengthVsRule{} over
 the best per-repository form, the registered rule on length gated on any
@@ -1161,7 +1168,7 @@ cutting a long method into pieces under the constant, the parameters and
 return values the pieces would exchange; its cheapest-seam form reaches
 \splitCostMcc{}, \splitCostVsLength{} against the constant, and among the
 \splitWithinN{} long methods, the only ground such a form can gain, it
-ranks the \splitWithinPositives{} positives worse than length does (AUC
+ranks the \splitWithinPositives{} positives no better than length does (AUC
 \splitCostAucWithin{} against \splitNlocAucWithin{}, \splitCostAucVsNloc{}).
 The share of a class's pieces bound to the class, read as a god-class
 form, is last on every class oracle (\splitLockedShareMcc{} against
@@ -1210,8 +1217,8 @@ unit, a repository whose reviewed units are all negatives included. The
 harness attached a human oracle to a repository only when the repository
 held a positive-labelled unit, so such repositories never entered the
 population. The fault was found after a confirmatory analysis had been
-written, its digest committed, and its results read and reported to the
-author in a draft of this paper; that is the one departure from the plan's
+written, its digest committed, and its results read by the author; that
+is the one departure from the plan's
 order, and it is recorded in the plan as Amendment 10 with what had been
 seen. The fix has no free parameter: it attaches the oracle whenever the
 reviewed universe is present, which is the population the plan's words
@@ -1526,8 +1533,9 @@ the author.
 
 \begin{thebibliography}{99}
 
-\bibitem{arif2026} M.~Arif, M.~Kuutila and P.~Ralph,
-  ``A factor analysis of class-level software metrics,''
+\bibitem{arif2026} H.~Arif, M.~Kuutila and P.~Ralph,
+  ``Assessing the construct validity of object-oriented, class-level code
+  quality metrics,''
   in \emph{Proc. ACM/IEEE International Symposium on Empirical Software
   Engineering and Measurement (ESEM)}, 2026; arXiv:2609.20411.
 
@@ -1634,7 +1642,8 @@ the author.
 
 \bibitem{tempero2026metrics} E.~Tempero and P.~Ralph,
   ``Making software metrics useful,''
-  \emph{IEEE Computer}, in press, 2026; arXiv:2603.16012.
+  \emph{IEEE Computer}, in press, 2026, doi:10.1109/MC.2026.3666634;
+  arXiv:2603.16012.
 
 \bibitem{tsantalis2011} N.~Tsantalis and A.~Chatzigeorgiou,
   ``Identification of extract method refactoring opportunities for the

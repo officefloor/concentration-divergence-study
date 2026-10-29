@@ -1304,6 +1304,14 @@ def main() -> int:
             th = {c["rule"]: c["mcc"] for c in cp["threshold"]["nloc"]}
             M("lwNlocTwentyMcc", rate(th[">=20"], 3)); M("lwNlocThirtyMcc", rate(th[">=30"], 3)); M("lwNlocFortyMcc", rate(th[">=40"], 3))
             M("lwConfirmRepos", str(cp["n_repos"])); M("lwConfirmUnits", count(cp["n_units"])); M("lwConfirmPositives", str(cp["n_positives"]))
+            # the grid the cutoff was chosen from, and the explore-half readings the choice was made on
+            grid = [re.sub(r"[^0-9]", "", c["rule"]) for c in cp["threshold"]["nloc"]]
+            M("lwNlocGrid", ", ".join(grid[:-1]) + " and " + grid[-1]); M("lwNlocGridCount", str(len(grid)))
+        ep = pop_of(LW, "human_method_long_method [explore]")
+        if ep:
+            the = {c["rule"]: c["mcc"] for c in ep["threshold"]["nloc"]}
+            M("lwExploreTwentyMcc", rate(the[">=20"], 3)); M("lwExploreThirtyMcc", rate(the[">=30"], 3))
+            M("lwExploreChosenMcc", rate(the[length["cutoff"]], 3))
     spk, SP = latest("split")
     if SP:
         stamp("split", spk, SP)

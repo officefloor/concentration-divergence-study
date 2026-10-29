@@ -21,9 +21,8 @@ well as its `_reviewed` universe. A repository with reviewed units and no positi
 carried no human definition and never entered a human population.
 
 **When it was found, and what had been seen.** The confirmatory analysis of {{priorMadeUtc}}
-(`results/analysis.v2.json`, sha256 `{{analysisVTwoShaShort}}…`) had been read in full and its
-results reported to the author in a draft of the paper before the fault was found, in the course
-of explaining why the populations' sizes differed from the label counts. That differs from
+(`results/analysis.v2.json`, sha256 `{{analysisVTwoShaShort}}…`) had been read in full by the author
+before the fault was found, in the course of explaining why the populations' sizes differed from the label counts. That differs from
 Amendment 9, where nothing had been read. Against it: the fix is required by the plan's
 "Fixed in advance" whatever the results say; its target is fixed by the plan's text, so no choice
 was open that knowledge of the results could steer; and the units it restores are negatives that

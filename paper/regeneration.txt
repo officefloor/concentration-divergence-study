@@ -81,5 +81,5 @@ INLINE NUMBERS (generated/numbers.tex, about 800 macros)
 CONSTANTS TYPED BY HAND
   The outlier rule's 3.5, the gate's target half-width 0.10 and floor 20, the bootstrap's 2000
   and 12345 (also read from the analysis file), the literature's 0.51 and 0.81 (Madeyski and
-  Lewowski 2023), the method count's 47 (WMC), Fontana's 420 and 140 instances, and the
+  Lewowski 2023), the companion study's tuned-cutoff MCC 0.785, the method count's 47 (WMC), Fontana's 420 and 140 instances, and the
   measurer's 8-hour budget and 9 GB heap.

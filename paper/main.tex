@@ -28,6 +28,8 @@
 \usepackage{amsmath}
 \usepackage{microtype}
 \usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={What reviewers call a Long Method is a length: a pre-registered test of coupling divergence as a god-unit signal, and what it settled instead},
+  pdfauthor={Daniel Sagenschneider}, pdfsubject={Software engineering: empirical study of god-unit detectors}}
 \usepackage{caption}
 \captionsetup{font=small,labelfont=bf}
 
@@ -70,8 +72,9 @@ readings go against it. What the data settle is at method level. What
 MLCQ's reviewers call a Long Method is an absolute length: a constant of
 \lwLengthCutoff{} lines or more, chosen on the explore half, reaches MCC
 \lwLengthMccConfirm{} on the confirm half, \lwLengthVsRule{} over the best
-per-repository form; every reviewer with ten or more positives has a best
-cutoff between \revCutoffMin{} and \revCutoffMax{} lines; and nothing
+per-repository form; every reviewer with ten or more positives, on their
+non-leaf reviews, has a best cutoff between \revCutoffMin{} and
+\revCutoffMax{} lines; and nothing
 measured inside a method, its calls, variables, data flow or the cost of
 cutting it, refines the constant. The constant is a limit of human reading.
 The next form of the construct is the cost of bringing a long method under
@@ -221,7 +224,7 @@ a fault found after the confirmatory results had been read. The harness
 had attached a human oracle to a repository only when it held a positive
 unit, so repositories whose reviewed units are all negatives never entered
 the population; the fault was found after a confirmatory analysis had been
-read and reported to the author in a draft of this paper. The fix has no
+read by the author. The fix has no
 free parameter; the explore-half choices and the analysis were made again
 by the registered procedure, the earlier files set aside with their
 digests. It restored \restoredBlobRepos{} confirm repositories and
@@ -255,17 +258,18 @@ calling it a Long Method at any severity.}
 \end{table}
 
 \paragraph{What the reviewers judge.} MLCQ keeps every review
-(Table~\ref{tab:reviewers}). The share of reviews calling a method a Long
-Method is \revNonLeafTenRate{} up to 10 lines,
+(Table~\ref{tab:reviewers}). The share of non-leaf reviews calling a method
+a Long Method is \revNonLeafTenRate{} up to 10 lines,
 \revNonLeafTwentyFiveRate{} at 11 to 25, \revNonLeafFiftyRate{} at 26 to 50
 and \revNonLeafHundredRate{} at 51 to 100: a step at about twenty-five
 lines. Each of the \revCutoffReviewers{} reviewers with ten or more
-positives has a best length cutoff between \revCutoffMin{} and
-\revCutoffMax{} lines (median \revCutoffMedian{}), an absolute constant
+positives has, on their non-leaf reviews, a best length cutoff between
+\revCutoffMin{} and \revCutoffMax{} lines (median \revCutoffMedian{}), an
+absolute constant
 carried from reviewer to reviewer, which is why a cutoff tuned on MLCQ beat
 the per-repository rule in the companion study and why no per-repository
 form here can reach it. At equal length a leaf is called
-a Long Method no less often than a non-leaf (\revLeafFiftyRate{} against
+a Long Method about as often as a non-leaf (\revLeafFiftyRate{} against
 \revNonLeafFiftyRate{} at 26 to 50 lines; over all long methods
 \revLongLeafMinusNonLeaf{}). The exemption the labels supported above is
 narrower than the construct: among the methods cognitive complexity flags,
@@ -274,10 +278,14 @@ leaves are called Long Method less often (\revFlaggedLeafRate{} against
 leaf reviewers decline to call a Long Method, not a leaf as such.
 
 \paragraph{The constant, read once.} The constant the reviews imply was
-read as the plan reads a cutoff: chosen on the explore half among absolute
-cutoffs on lines and read on the confirm half (\lwConfirmRepos{}
-repositories, \lwConfirmUnits{} reviewed methods, \lwConfirmPositives{}
-positives). The cutoff chosen is \lwLengthCutoff{} lines or more. On confirm
+read as the plan reads a cutoff: chosen on the explore half among
+\lwNlocGridCount{} absolute cutoffs on lines, \lwNlocGrid{}, round numbers
+with the companion study's tuned cutoff among them, and read on the confirm
+half (\lwConfirmRepos{} repositories, \lwConfirmUnits{} reviewed methods,
+\lwConfirmPositives{} positives). On the explore half the cutoffs read
+\lwExploreTwentyMcc{} at 20, \lwExploreChosenMcc{} at \lwLengthCutoff{} and
+\lwExploreThirtyMcc{} at 30, so the cutoff chosen is \lwLengthCutoff{} lines
+or more. On confirm
 it flags \lwLengthFlagged{} methods with \lwLengthHits{} hits, MCC
 \lwLengthMccConfirm{} (precision \lwLengthPrecision{}, recall
 \lwLengthRecall{}), \lwLengthVsRule{} over the best per-repository form,
@@ -297,8 +305,9 @@ The second scored the cost of cutting a long method into pieces under the
 constant, the parameters and return values the pieces would exchange; its
 cheapest-seam form reaches \splitCostMcc{}, \splitCostVsLength{} against
 the constant, and among the \splitWithinN{} long methods, the only ground
-it can gain, it ranks the \splitWithinPositives{} positives worse than
-length does (AUC \splitCostAucWithin{} against \splitNlocAucWithin{}).
+it can gain, it ranks the \splitWithinPositives{} positives no better than
+length does (AUC \splitCostAucWithin{} against \splitNlocAucWithin{},
+\splitCostAucVsNloc{}).
 Nothing in a long method's body, as these measures see it, says which of
 the methods length flags the reviewers passed.
 
@@ -361,7 +370,9 @@ collaborators are invisible to static parsing. The study is Java only, and
 \mlcqOwnerTopShare{} of MLCQ's confirm half sits in ten owners. The primary
 is underpowered by its own gate, no secondary is corrected for
 multiplicity, and the bootstraps are coarse at the tails. The post hoc readings of Section~\ref{sec:length} followed the constant
-onto the confirm half, so that half is a hold-out for the constant alone. The plan's stated purpose, a definition
+onto the confirm half, so that half is a hold-out for the choice among the
+\lwNlocGridCount{} cutoffs alone, and the grid itself was drawn after the
+reviews of both halves had been read. The plan's stated purpose, a definition
 that moves with the codebase as agent-maintained code changes what a normal
 level of complexity is, was not tested: no agent-written corpus with human
 labels exists at the scale a pre-registered test needs.
@@ -406,8 +417,9 @@ sampler and measurer these are. The work received no external funding.
   in \emph{Proc. 26th IEEE International Conference on Software Maintenance
   (ICSM)}, pp.~1--10, 2010.
 
-\bibitem{arif2026} M.~Arif, M.~Kuutila and P.~Ralph,
-  ``A factor analysis of class-level software metrics,''
+\bibitem{arif2026} H.~Arif, M.~Kuutila and P.~Ralph,
+  ``Assessing the construct validity of object-oriented, class-level code
+  quality metrics,''
   in \emph{Proc. ACM/IEEE International Symposium on Empirical Software
   Engineering and Measurement (ESEM)}, 2026; arXiv:2609.20411.
 
@@ -474,7 +486,8 @@ sampler and measurer these are. The work received no external funding.
 
 \bibitem{tempero2026metrics} E.~Tempero and P.~Ralph,
   ``Making software metrics useful,''
-  \emph{IEEE Computer}, in press, 2026; arXiv:2603.16012.
+  \emph{IEEE Computer}, in press, 2026, doi:10.1109/MC.2026.3666634;
+  arXiv:2603.16012.
 
 \bibitem{tsantalis2011} N.~Tsantalis and A.~Chatzigeorgiou,
   ``Identification of extract method refactoring opportunities for the
