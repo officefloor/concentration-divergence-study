@@ -47,7 +47,8 @@
 \title{\bfseries What reviewers call a Long Method is a length\\ A pre-registered test of coupling divergence as a god-unit signal, and what it settled instead}
 
 % Zenodo DOI, reserved before publishing and printed under the author block.
-\newcommand{\doiline}{\ifdefined\thedoi\\\small\texttt{doi:\thedoi}\fi}
+\newcommand{\thedoi}{10.5281/zenodo.23749773}
+\newcommand{\doiline}{\ifdefined\thedoi\quad\small\texttt{doi:\thedoi}\fi}
 
 \author{Daniel Sagenschneider\\\small OfficeFloor\\\small\texttt{daniel@officefloor.net}\doiline}
 
@@ -410,6 +411,8 @@ replication needs no cooperation from the author, whose companion study,
 sampler and measurer these are. The work received no external funding.
 
 \small
+\let\oldthebibliography\thebibliography
+\renewcommand{\thebibliography}[1]{\oldthebibliography{#1}\setlength{\itemsep}{2pt}}
 \begin{thebibliography}{99}
 
 \bibitem{alves2010} T.~L. Alves, C.~Ypma and J.~Visser,
