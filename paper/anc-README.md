@@ -10,6 +10,19 @@ by running the harness on the sample files below, which pin every repository to 
 every Qualitas system to its archive's sha256. `REGENERATION.txt` maps every table and inline
 number to the command that produces it.
 
+**The arXiv copy leaves out five large files** (about 210 MB) to fit arXiv's size limit. Each
+keeps its `.sha256` here, and all of them are in the Zenodo record of the paper,
+[doi:10.5281/zenodo.23749773](https://doi.org/10.5281/zenodo.23749773), in its `arxiv.tar.gz`
+under the same paths:
+
+| File | sha256 |
+|---|---|
+| `analysis/analysis.json` | `9aa901ddc12b9c35e9e9aa5389ed4ae84d265ae094bf4f9f80c290ff5e6da516` |
+| `analysis/analysis.v1.json` | `d64d4c8d547fa3993553927fc91dc4b7455c4f0f39fed70103addef119ba3a80` |
+| `analysis/analysis.v2.json` | `9519e2466f44c567e7f22e3fab49efce8edcad8ac2ee63f92a1f9b34e100fa3b` |
+| `analysis/log-matrix.20261026T230649Z.json` | `2fa130f412f6e85e78f745c7d2a9c3f7f9829b2c274edac027d0d46c3b75dbf9` |
+| `sample/attempt-1/.seed3.progress.before-quota-truncation.jsonl` | `a35772cca86ed8f4ab6e2814f3f8faae1900deb0130ef6d589320ef157ba856a` |
+
 ## The repositories
 
 Everything is public and Apache-2.0 licensed unless stated.

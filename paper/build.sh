@@ -2,7 +2,8 @@
 #
 # Build the paper and pack the arXiv bundle.
 #
-#   ./build.sh
+#   ./build.sh           # arxiv.tar.gz, the arXiv bundle, with the large data files left out
+#   ./build.sh --full    # also full-data.tar.gz, every file, the bundle deposited on Zenodo
 #
 # The build needs only main.tex, generated/ and figures/, all tracked, so a fresh clone builds
 # without the harness, its results or any Python. Regenerating generated/ from the results is
@@ -14,8 +15,10 @@
 # Writes: main.pdf, report.pdf, abstract.txt (the abstract as plain text, for the arXiv and Zenodo forms, with
 # a warning past arXiv's 1920 characters) and arxiv.tar.gz, the submission bundle: main.tex and
 # generated/ at the root and, under anc/, the data the paper rests on (see pack() and
-# anc-README.md). The harness's scripts are not packed; they are in the public repository.
+# anc-README.md), less the three analysis*.json, log-matrix.*.json and attempt-1's progress log,
+# which arXiv's size limit leaves to the Zenodo record. The harness's scripts are not packed; they are in the public repository.
 set -euo pipefail
+FULL=0; [ "${1:-}" = --full ] && FULL=1
 cd "$(dirname "$0")"
 ROOT="$(cd .. && pwd)"
 
@@ -85,8 +88,20 @@ pack() {
   cp "$ROOT/PLAN.md" "$ROOT/SINEW.md" "$stage/anc/"
   mkdir -p "$stage/anc/full-report"
   cp report.tex report.pdf "$stage/anc/full-report/" 2>/dev/null || echo "   ! report.pdf missing" >&2
+  if [ "$FULL" = 1 ]; then
+    tar czf full-data.tar.gz main.tex generated -C "$stage" anc
+    echo "Packed full-data.tar.gz, every file, for Zenodo ($(tar tzf full-data.tar.gz | grep -c .) entries, $(du -h full-data.tar.gz | cut -f1))"
+  fi
+  # arXiv takes a small bundle: the large files stay in the Zenodo record (doi:10.5281/zenodo.23749773,
+  # its arxiv.tar.gz), named with their digests in anc/README.md. Their .sha256 files are kept here.
+  ( cd "$stage/anc"
+    rm -f analysis/analysis.json analysis/analysis.v*.json analysis/log-matrix.*.json
+    local p; for p in sample/attempt-1/.seed3.progress.*.jsonl; do
+      [ -f "$p" ] || continue
+      (cd "$(dirname "$p")" && sha256sum "$(basename "$p")" > "$(basename "$p").sha256" && rm "$(basename "$p")")
+    done )
   tar czf arxiv.tar.gz main.tex generated -C "$stage" anc
-  echo "Packed arxiv.tar.gz ($(tar tzf arxiv.tar.gz | grep -c .) entries, $(du -h arxiv.tar.gz | cut -f1))"
+  echo "Packed arxiv.tar.gz ($(tar tzf arxiv.tar.gz | grep -c .) entries, $(du -h arxiv.tar.gz | cut -f1), $(tar tzvf arxiv.tar.gz | awk '{s+=$3} END{printf "%.1f MB", s/1e6}') unpacked)"
 }
 
 abstract
