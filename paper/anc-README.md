@@ -11,7 +11,9 @@ every Qualitas system to its archive's sha256. `REGENERATION.txt` maps every tab
 number to the command that produces it.
 
 **The arXiv copy leaves out five large files** (about 210 MB) to fit arXiv's size limit. Each
-keeps its `.sha256` here, and all of them are in the Zenodo record of the paper,
+keeps its `.sha256` here (the hidden progress log's as
+`sample/attempt-1/seed3.progress.before-quota-truncation.jsonl.sha256`, without the leading dot,
+since arXiv removes hidden files), and all of them are in the Zenodo record of the paper,
 [doi:10.5281/zenodo.23749773](https://doi.org/10.5281/zenodo.23749773), in its `arxiv.tar.gz`
 under the same paths:
 
@@ -45,7 +47,7 @@ Everything is public and Apache-2.0 licensed unless stated.
 
 | File | What it is |
 |---|---|
-| `full-report/report.tex`, `full-report/report.pdf` | **The full registered report.** The paper keeps three things (the claim failing, the constant on length, the next form of the construct); this is the complete account the plan commits to, every secondary, sensitivity, tool oracle, Fontana replication, Friedman test, intersection, matched-rate and log-scale reading, and the size-times-calls exploration, built from the same generated numbers and tables. Section numbers quoted as "full report" below refer to it. |
+| `full-report/report.tex`, `full-report/registered-report.pdf` | **The full registered report.** The paper keeps three things (the claim failing, the constant on length, the next form of the construct); this is the complete account the plan commits to, every secondary, sensitivity, tool oracle, Fontana replication, Friedman test, intersection, matched-rate and log-scale reading, and the size-times-calls exploration, built from the same generated numbers and tables. Section numbers quoted as "full report" below refer to it. |
 | `analysis.json`, `.sha256` | **The confirmatory analysis** the paper reports (`kind: confirmatory`; its `made_utc`, `harness_commit` and sha256 are inside it and in `analysis-hashes.txt`). Every primary, secondary, sensitivity and diagnostic number in the paper is read from it. Its sections: `diagnostics`, `primary`, `leaf`, `consistency`, `secondary`, `sensitivity`, `exploratory_intersection`, each for the `joined` and `javaparser` result sets. |
 | `analysis.v1.json`, `.sha256` | The first confirmatory analysis (2026-10-26 08:04 UTC, commit `a809d0a`, sha256 `d64d4c8d…`), set aside by Amendment 9 because Fontana's archives had resolved for 19 of 73 systems; none of its results had been read. |
 | `analysis.v2.json`, `.sha256` | The second (2026-10-26 09:49 UTC, commit `4d73bc1`, sha256 `9519e246…`), set aside by Amendment 10: the human populations held only the repositories with a positive. Its results had been read by the author before the fault was found. `DEVIATIONS.md` tabulates every headline reading of this file against the reported one. |

@@ -10,7 +10,8 @@
 # `../.venv/bin/python scripts/tables.py`, not part of the build.
 #
 # report.tex is the full registered report (every secondary, sensitivity and table the paper leaves
-# out), built to report.pdf from the same generated/ and packed under anc/full-report/.
+# out), built to report.pdf from the same generated/ and packed under anc/full-report/ as
+# registered-report.pdf.
 #
 # Writes: main.pdf, report.pdf, abstract.txt (the abstract as plain text, for the arXiv and Zenodo forms, with
 # a warning past arXiv's 1920 characters) and arxiv.tar.gz, the submission bundle: main.tex and
@@ -87,7 +88,10 @@ pack() {
   cp "$ROOT"/inputs/fontana/ACCESS.md "$ROOT"/inputs/fontana/SHA256SUMS "$d/" 2>/dev/null || true
   cp "$ROOT/PLAN.md" "$ROOT/SINEW.md" "$stage/anc/"
   mkdir -p "$stage/anc/full-report"
-  cp report.tex report.pdf "$stage/anc/full-report/" 2>/dev/null || echo "   ! report.pdf missing" >&2
+  # arXiv deletes a PDF named as a .tex beside it (taking it for build output), so the PDF is packed
+  # as registered-report.pdf.
+  cp report.tex "$stage/anc/full-report/"
+  cp report.pdf "$stage/anc/full-report/registered-report.pdf" 2>/dev/null || echo "   ! report.pdf missing" >&2
   if [ "$FULL" = 1 ]; then
     tar czf full-data.tar.gz main.tex generated -C "$stage" anc
     echo "Packed full-data.tar.gz, every file, for Zenodo ($(tar tzf full-data.tar.gz | grep -c .) entries, $(du -h full-data.tar.gz | cut -f1))"
@@ -98,7 +102,9 @@ pack() {
     rm -f analysis/analysis.json analysis/analysis.v*.json analysis/log-matrix.*.json
     local p; for p in sample/attempt-1/.seed3.progress.*.jsonl; do
       [ -f "$p" ] || continue
-      (cd "$(dirname "$p")" && sha256sum "$(basename "$p")" > "$(basename "$p").sha256" && rm "$(basename "$p")")
+      # arXiv deletes hidden files, so the digest drops the leading dot from its own name.
+      local b; b="$(basename "$p")"
+      (cd "$(dirname "$p")" && sha256sum "$b" > "${b#.}.sha256" && rm "$b")
     done )
   tar czf arxiv.tar.gz main.tex generated -C "$stage" anc
   echo "Packed arxiv.tar.gz ($(tar tzf arxiv.tar.gz | grep -c .) entries, $(du -h arxiv.tar.gz | cut -f1), $(tar tzvf arxiv.tar.gz | awk '{s+=$3} END{printf "%.1f MB", s/1e6}') unpacked)"
